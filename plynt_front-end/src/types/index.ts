@@ -1,5 +1,5 @@
 // ─── Core primitives ──────────────────────────────────────────────────────────
-export type AssetSymbol = "USDC" | "XLM" | "EURC" | "AQUA";
+export type AssetSymbol = "USDC" | "MON" | "WETH" | "AQUA";
 export type TransactionType = "incoming" | "outgoing" | "payment" | "swap";
 export type TransactionStatus = "confirmed" | "pending" | "failed";
 export type InvoiceStatus = "draft" | "pending" | "paid" | "overdue";
@@ -20,7 +20,7 @@ export interface Wallet {
   id: string;
   name: string;
   address: string;
-  network: "Stellar Testnet" | "Stellar Network";
+  network: "Monad Testnet" | "Monad Mainnet";
   connected: boolean;
   totalBalance: number;
   assets: Asset[];

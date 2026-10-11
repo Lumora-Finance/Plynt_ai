@@ -48,7 +48,7 @@ export const Route = createFileRoute("/gifts")({
   head: () => ({
     meta: [
       { title: "Gifts — PLYNT" },
-      { name: "description", content: "Send and manage programmable USDC gifts on Stellar." },
+      { name: "description", content: "Send and manage programmable USDC gifts on Monad." },
     ],
   }),
   component: GiftsPage,
@@ -164,7 +164,7 @@ type CreateGiftForm = {
   recipient: string;
   recipientAddress: string;
   amount: string;
-  asset: "USDC" | "XLM" | "EURC";
+  asset: "USDC" | "MON" | "WETH";
   message: string;
   unlockDate: string;
   expirationDate: string;
@@ -242,7 +242,7 @@ function CreateGiftDialog({ open, onOpenChange, onCreated }: { open: boolean; on
             </div>
             <div className="grid gap-2">
               <Label>Recipient address (optional)</Label>
-              <Input placeholder="Stellar wallet address" value={form.recipientAddress} onChange={(e) => set("recipientAddress", e.target.value)} />
+              <Input placeholder="Monad wallet address (0x…)" value={form.recipientAddress} onChange={(e) => set("recipientAddress", e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
@@ -255,8 +255,8 @@ function CreateGiftDialog({ open, onOpenChange, onCreated }: { open: boolean; on
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="USDC">USDC</SelectItem>
-                    <SelectItem value="XLM">XLM</SelectItem>
-                    <SelectItem value="EURC">EURC</SelectItem>
+                    <SelectItem value="MON">MON</SelectItem>
+                    <SelectItem value="WETH">WETH</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -303,7 +303,7 @@ function CreateGiftDialog({ open, onOpenChange, onCreated }: { open: boolean; on
           <div className="space-y-4 py-2">
             <div className="insight">
               <p className="text-xs font-600 uppercase tracking-wide text-muted-foreground">SIMULATED — Demo mode</p>
-              <p className="mt-1 text-sm">No real Stellar transaction will occur. Gifts in live mode use Soroban time-lock contracts.</p>
+              <p className="mt-1 text-sm">No real Monad transaction will occur. Gifts in live mode use time-lock smart contracts.</p>
             </div>
             <div className="detail-list">
               {[
@@ -313,7 +313,7 @@ function CreateGiftDialog({ open, onOpenChange, onCreated }: { open: boolean; on
                 ...(form.expirationDate ? [["Expires", form.expirationDate] as [string, string]] : []),
                 ...(form.isRecurring ? [["Recurrence", `${form.recurrenceFrequency} × ${form.recurrenceCount}`] as [string, string]] : []),
                 ...(form.message ? [["Message", form.message] as [string, string]] : []),
-                ["Network", "Stellar (Demo)"],
+                ["Network", "Monad (Demo)"],
               ].map(([k, v]) => (
                 <div key={k}>
                   <span>{k}</span>

@@ -116,7 +116,7 @@ const flows: Record<string, Flow> = {
       { message: "What's the client's email address?", field: { key: "clientEmail", label: "Client email", type: "text", placeholder: "finance@client.com", required: true } },
       { message: "What's the invoice title?", field: { key: "title", label: "Invoice title", type: "text", placeholder: "e.g. Product design retainer", required: true } },
       { message: "What's the total amount?", field: { key: "amount", label: "Amount", type: "number", placeholder: "e.g. 1500", required: true } },
-      { message: "Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "EURC", "XLM"] } },
+      { message: "Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "WETH", "MON"] } },
       { message: "What's the due date?", field: { key: "dueDate", label: "Due date", type: "date", required: true } },
       { message: "Any notes for the client? (optional)", field: { key: "notes", label: "Notes", type: "text", placeholder: "e.g. Payment due within 14 days" } },
     ],
@@ -127,7 +127,7 @@ const flows: Record<string, Flow> = {
       "Amount": `${d.amount} ${d.asset ?? "USDC"}`,
       "Due": d.dueDate ?? "",
       ...(d.notes && d.notes !== "—" ? { "Notes": d.notes } : {}),
-      "Network": "Stellar (Demo)",
+      "Network": "Monad (Demo)",
     }),
     confirmQuestion: "Here's your invoice. Open the invoice editor to review and send it?",
     modal: (d) => ({ type: "invoice", prefill: d }),
@@ -139,15 +139,15 @@ const flows: Record<string, Flow> = {
     steps: [
       { message: "Who are you sending to? Enter their name or wallet address.", field: { key: "recipient", label: "Recipient", type: "text", placeholder: "G… or name", required: true } },
       { message: "How much?", field: { key: "amount", label: "Amount", type: "number", placeholder: "e.g. 500", required: true } },
-      { message: "Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "XLM", "EURC"] } },
+      { message: "Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "MON", "WETH"] } },
       { message: "Any memo? (optional — leave blank to skip)", field: { key: "memo", label: "Memo", type: "text", placeholder: "e.g. Invoice #104" } },
     ],
     buildConfirmSummary: (d) => ({
       "To": d.recipient ?? "",
       "Amount": `${d.amount} ${d.asset ?? "USDC"}`,
       ...(d.memo && d.memo !== "—" ? { "Memo": d.memo } : {}),
-      "Network fee": "0.00001 XLM",
-      "Network": "Stellar (Demo)",
+      "Network fee": "0.000021 MON",
+      "Network": "Monad (Demo)",
     }),
     confirmQuestion: "Ready to open the send dialog with these details?",
     modal: (d) => ({ type: "send", prefill: d }),
@@ -159,7 +159,7 @@ const flows: Record<string, Flow> = {
     steps: [
       { message: "Who is the gift for?", field: { key: "recipient", label: "Recipient", type: "text", placeholder: "e.g. Mom, Alex", required: true } },
       { message: "How much?", field: { key: "amount", label: "Amount", type: "number", placeholder: "e.g. 100", required: true } },
-      { message: "Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "XLM", "EURC"] } },
+      { message: "Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "MON", "WETH"] } },
       { message: "When should it unlock? The recipient can claim it on or after this date.", field: { key: "unlockDate", label: "Unlock date", type: "date", required: true } },
       { message: "Should it expire? Enter an expiry date, or skip to leave it open.", field: { key: "expirationDate", label: "Expiry date", type: "date" } },
       { message: "Is this recurring?", field: { key: "recurring", label: "Recurring?", type: "chips", options: ["No — one-time", "Yes — weekly", "Yes — monthly"] } },
@@ -182,7 +182,7 @@ const flows: Record<string, Flow> = {
     title: "Create a savings rule",
     steps: [
       { message: "How much to save — enter a fixed amount (e.g. 200) or percentage (e.g. 20%)?", field: { key: "amount", label: "Amount or %", type: "text", placeholder: "e.g. 200 or 20%", required: true } },
-      { message: "Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "XLM", "EURC"] } },
+      { message: "Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "MON", "WETH"] } },
       { message: "Where should savings go?", field: { key: "destination", label: "Destination", type: "text", placeholder: "e.g. Savings wallet", required: true } },
       { message: "How often?", field: { key: "frequency", label: "Frequency", type: "chips", options: ["On every payment", "Weekly", "Monthly"] } },
       { message: "What should this rule be called?", field: { key: "name", label: "Rule name", type: "text", placeholder: "e.g. Auto savings 20%", required: true } },
@@ -203,7 +203,7 @@ const flows: Record<string, Flow> = {
     steps: [
       { message: "Who receives it?", field: { key: "recipient", label: "Recipient", type: "text", placeholder: "Name or address", required: true } },
       { message: "How much per payment?", field: { key: "amount", label: "Amount", type: "number", placeholder: "e.g. 50", required: true } },
-      { message: "Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "XLM", "EURC"] } },
+      { message: "Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "MON", "WETH"] } },
       { message: "How often?", field: { key: "frequency", label: "Frequency", type: "chips", options: ["Daily", "Weekly", "Biweekly", "Monthly"] } },
       { message: "For how many payments? (leave blank for indefinite)", field: { key: "occurrences", label: "Occurrences", type: "number", placeholder: "e.g. 12" } },
       { message: "When should it start?", field: { key: "startDate", label: "Start date", type: "date", required: true } },
@@ -224,7 +224,7 @@ const flows: Record<string, Flow> = {
     title: "Set up salary distribution",
     steps: [
       { message: "What's your monthly salary amount?", field: { key: "salary", label: "Monthly salary", type: "number", placeholder: "e.g. 2000", required: true } },
-      { message: "Which asset do you receive salary in?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "EURC", "XLM"] } },
+      { message: "Which asset do you receive salary in?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "WETH", "MON"] } },
       { message: "What % goes to your Personal account?", field: { key: "personal", label: "Personal %", type: "number", placeholder: "e.g. 60", required: true } },
       { message: "What % to Savings?", field: { key: "savings", label: "Savings %", type: "number", placeholder: "e.g. 20", required: true } },
       { message: "What % to Rent?", field: { key: "rent", label: "Rent %", type: "number", placeholder: "e.g. 10", required: true } },
@@ -253,7 +253,7 @@ const flows: Record<string, Flow> = {
     steps: [
       { message: "Who receives the allowance?", field: { key: "recipient", label: "Recipient", type: "text", placeholder: "e.g. Child, Family member", required: true } },
       { message: "How much per payment?", field: { key: "amount", label: "Amount", type: "number", placeholder: "e.g. 50", required: true } },
-      { message: "Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "XLM", "EURC"] } },
+      { message: "Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "MON", "WETH"] } },
       { message: "How often?", field: { key: "frequency", label: "Frequency", type: "chips", options: ["Weekly", "Biweekly", "Monthly"] } },
       { message: "When should it start?", field: { key: "startDate", label: "Start date", type: "date", required: true } },
     ],
@@ -282,7 +282,7 @@ const categories = [
   },
   {
     id: "portfolio", label: "Portfolio", icon: BarChart3,
-    chips: ["How is my portfolio distributed?", "How much USDC do I have?", "How much XLM do I have?", "How much EURC do I have?", "How has my balance changed?"] as ChipDef[],
+    chips: ["How is my portfolio distributed?", "How much USDC do I have?", "How much MON do I have?", "How much WETH do I have?", "How has my balance changed?"] as ChipDef[],
   },
   {
     id: "actions", label: "Take Action", icon: Zap,
@@ -424,7 +424,7 @@ function InlineInvoiceModal({
               <Select value={form.asset} onValueChange={(v) => setForm((f) => ({ ...f, asset: v as AssetSymbol }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["USDC", "EURC", "XLM"].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                  {["USDC", "WETH", "MON"].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -495,7 +495,7 @@ function InlineGiftModal({
               <Label>Asset</Label>
               <Select value={form.asset} onValueChange={(v) => setForm((f) => ({ ...f, asset: v as AssetSymbol }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{["USDC", "XLM", "EURC"].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                <SelectContent>{["USDC", "MON", "WETH"].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid gap-1.5"><Label>Unlock date</Label><Input type="date" value={form.unlockDate} onChange={(e) => setForm((f) => ({ ...f, unlockDate: e.target.value }))} /></div>
@@ -519,7 +519,7 @@ function InlineGiftModal({
             </div>
           )}
           <div className="rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400">
-            Demo mode — in live mode this creates a Soroban time-lock contract.
+            Demo mode — in live mode this creates a Monad time-lock smart contract.
           </div>
         </div>
         <DialogFooter>
@@ -576,7 +576,7 @@ function InlineAutomationModal({
               <Label>Asset</Label>
               <Select value={form.asset} onValueChange={(v) => setForm((f) => ({ ...f, asset: v as AssetSymbol }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{["USDC", "XLM", "EURC"].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                <SelectContent>{["USDC", "MON", "WETH"].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>
@@ -652,7 +652,7 @@ function InlineRecurringModal({
               <Label>Asset</Label>
               <Select value={form.asset} onValueChange={(v) => setForm((f) => ({ ...f, asset: v as AssetSymbol }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{["USDC", "XLM", "EURC"].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                <SelectContent>{["USDC", "MON", "WETH"].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>
@@ -729,7 +729,7 @@ function InlineSalaryModal({
               <Label>Asset</Label>
               <Select value={form.asset} onValueChange={(v) => setForm((f) => ({ ...f, asset: v as AssetSymbol }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{["USDC", "EURC", "XLM"].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                <SelectContent>{["USDC", "WETH", "MON"].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>

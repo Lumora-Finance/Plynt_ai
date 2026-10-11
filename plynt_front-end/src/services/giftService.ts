@@ -3,7 +3,7 @@
  *
  * MODE: DEMO / SIMULATION
  * No blockchain transactions are executed.
- * In live mode, gift creation would call a Soroban smart contract
+ * In live mode, gift creation would call a Monad smart contract
  * that time-locks USDC until the unlock date.
  */
 import type { Gift } from "@/types";

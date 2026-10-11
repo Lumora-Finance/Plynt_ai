@@ -2,7 +2,7 @@
  * Salary Service
  *
  * MODE: DEMO / SIMULATION
- * No real payments. Replace with Soroban / Stellar Horizon integration for live mode.
+ * No real payments. Replace with Monad smart contract integration for live mode.
  */
 import type { SalaryConfig, SalaryRecord, SalarySplitRule } from "@/types";
 import { mockSalaryConfig, mockSalaryHistory } from "@/data/mockSalary";

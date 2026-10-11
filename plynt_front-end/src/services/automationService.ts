@@ -2,8 +2,8 @@
  * Automation Service
  *
  * MODE: DEMO / SIMULATION
- * All operations are local mock data mutations. No Stellar transactions are executed.
- * Replace the internals of each method with Soroban contract calls for live mode.
+ * All operations are local mock data mutations. No Monad transactions are executed.
+ * Replace the internals of each method with Monad contract calls for live mode.
  */
 import type { AutomationRule, AutomationExecution } from "@/types";
 import { mockAutomations, mockAutomationExecutions } from "@/data/mockAutomations";

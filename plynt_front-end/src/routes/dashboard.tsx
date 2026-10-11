@@ -35,9 +35,9 @@ export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
       { title: "Dashboard — PLYNT" },
-      { name: "description", content: "Your Stellar wallet, activity, invoices, and financial overview." },
+      { name: "description", content: "Your Monad wallet, activity, invoices, and financial overview." },
       { property: "og:title", content: "Dashboard — PLYNT" },
-      { property: "og:description", content: "Your Stellar wallet, activity, invoices, and financial overview." },
+      { property: "og:description", content: "Your Monad wallet, activity, invoices, and financial overview." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -65,7 +65,7 @@ function DashboardPage() {
   ];
 
   const actions = [
-    { title: "Send", description: "Send assets to another Stellar wallet.", icon: ArrowUpRight, onClick: () => setSend(true) },
+    { title: "Send", description: "Send assets to another Monad wallet.", icon: ArrowUpRight, onClick: () => setSend(true) },
     { title: "Receive", description: "Receive assets into your wallet.", icon: ArrowDownLeft, onClick: () => setReceive(true) },
     { title: "Create invoice", description: "Request payment from a client.", icon: FilePlus2, onClick: () => nav({ to: "/invoices/new" }) },
     { title: "Analytics", description: "Understand your financial activity.", icon: ChartNoAxesCombined, onClick: () => nav({ to: "/analytics" }) },
@@ -81,7 +81,7 @@ function DashboardPage() {
   return (
     <div className="space-y-8">
       <Reveal>
-        <PageIntro title="Good morning, Clement" description="Here's what's happening with your Stellar activity." action={<DemoBadge />} />
+        <PageIntro title="Good morning, Clement" description="Here's what's happening with your Monad activity." action={<DemoBadge />} />
       </Reveal>
 
       {/* Hero wallet */}
@@ -92,7 +92,7 @@ function DashboardPage() {
             <p className="mt-2 text-4xl font-semibold tracking-normal md:text-5xl">
               <CountUp value={mockWallet.totalBalance} prefix="$" decimals={2} />
             </p>
-            <p className="mt-3 text-sm text-primary-foreground/70">Across USDC, XLM, and EURC · Stellar Network</p>
+            <p className="mt-3 text-sm text-primary-foreground/70">Across USDC, MON, and WETH · Monad Testnet</p>
           </div>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={() => setSend(true)}>

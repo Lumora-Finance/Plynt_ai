@@ -76,7 +76,7 @@ export function LandingPage() {
             className="mt-3 text-sm"
             style={{ fontFamily: "var(--font-mono)", color: "#727285" }}
           >
-            AI Financial Workspace · Stellar
+            AI Financial Workspace · Monad
           </p>
         </div>
 

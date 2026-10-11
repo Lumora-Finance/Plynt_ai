@@ -43,7 +43,7 @@ export const Route = createFileRoute("/recurring")({
   head: () => ({
     meta: [
       { title: "Recurring Payments — PLYNT" },
-      { name: "description", content: "Manage scheduled and recurring payments on Stellar." },
+      { name: "description", content: "Manage scheduled and recurring payments on Monad." },
     ],
   }),
   component: RecurringPage,
@@ -151,7 +151,7 @@ type NewPaymentForm = {
   name: string;
   recipient: string;
   amount: string;
-  asset: "USDC" | "XLM" | "EURC";
+  asset: "USDC" | "MON" | "WETH";
   frequency: RecurringPayment["frequency"];
   startDate: string;
   endDate: string;
@@ -245,8 +245,8 @@ function CreatePaymentDialog({
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="USDC">USDC</SelectItem>
-                    <SelectItem value="XLM">XLM</SelectItem>
-                    <SelectItem value="EURC">EURC</SelectItem>
+                    <SelectItem value="MON">MON</SelectItem>
+                    <SelectItem value="WETH">WETH</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -289,7 +289,7 @@ function CreatePaymentDialog({
           <div className="space-y-4 py-2">
             <div className="insight">
               <p className="text-xs font-600 uppercase tracking-wide text-muted-foreground">SIMULATED — Demo mode</p>
-              <p className="mt-1 text-sm">No real Stellar transaction will occur until live mode is enabled.</p>
+              <p className="mt-1 text-sm">No real Monad transaction will occur until live mode is enabled.</p>
             </div>
             <div className="detail-list">
               {[
@@ -300,7 +300,7 @@ function CreatePaymentDialog({
                 ["Start date", form.startDate],
                 ...(form.endDate ? [["End date", form.endDate] as [string, string]] : []),
                 ...(form.memo ? [["Memo", form.memo] as [string, string]] : []),
-                ["Network", "Stellar (Demo)"],
+                ["Network", "Monad (Demo)"],
               ].map(([k, v]) => (
                 <div key={k}>
                   <span>{k}</span>
@@ -368,7 +368,7 @@ function RecurringPage() {
       <Reveal>
         <PageIntro
           title="Recurring Payments"
-          description="Schedule and manage automatic recurring payments to anyone on Stellar."
+          description="Schedule and manage automatic recurring payments to anyone on Monad."
           action={<DemoBadge />}
         />
       </Reveal>

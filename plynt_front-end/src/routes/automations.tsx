@@ -51,7 +51,7 @@ export const Route = createFileRoute("/automations")({
   head: () => ({
     meta: [
       { title: "Automations — PLYNT" },
-      { name: "description", content: "Create and manage your programmable money rules on Stellar." },
+      { name: "description", content: "Create and manage your programmable money rules on Monad." },
     ],
   }),
   component: AutomationsPage,
@@ -352,8 +352,8 @@ function CreateRuleDialog({ open, onOpenChange, onCreated }: { open: boolean; on
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="USDC">USDC</SelectItem>
-                    <SelectItem value="XLM">XLM</SelectItem>
-                    <SelectItem value="EURC">EURC</SelectItem>
+                    <SelectItem value="MON">MON</SelectItem>
+                    <SelectItem value="WETH">WETH</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -400,7 +400,7 @@ function CreateRuleDialog({ open, onOpenChange, onCreated }: { open: boolean; on
           <div className="space-y-4 py-2">
             <div className="insight">
               <p className="text-xs font-600 uppercase tracking-wide text-muted-foreground">SIMULATED — Demo mode</p>
-              <p className="mt-1 text-sm">No real Stellar transaction will be created. This automation is stored in demo state only.</p>
+              <p className="mt-1 text-sm">No real Monad transaction will be created. This automation is stored in demo state only.</p>
             </div>
             <div className="detail-list">
               {[
