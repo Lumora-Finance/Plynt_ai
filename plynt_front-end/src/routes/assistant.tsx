@@ -35,8 +35,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { DemoBadge, IconButton, currency } from "@/components/shared/common";
+import { IconButton, currency } from "@/components/shared/common";
 import { assistantService } from "@/services/assistantService";
+import { useWalletData } from "@/hooks/use-wallet-data";
+import { useTransactions } from "@/hooks/use-transactions";
 import type { AssistantMessage, AssetSymbol } from "@/types";
 import { SendDialog } from "@/components/wallet/wallet-flows";
 
@@ -889,6 +891,9 @@ type ActiveModal =
   | null;
 
 export default function AssistantPage() {
+  const { data: walletData } = useWalletData();
+  const { transactions } = useTransactions();
+
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [flowState, setFlowState] = useState<FlowState | null>(null);
   const [freeInput, setFreeInput] = useState("");
@@ -994,7 +999,20 @@ export default function AssistantPage() {
     addMsg({ role: "user", text });
     setLoading(true);
     setSuggestionsOpen(false);
-    const result = await assistantService.sendMessage(text);
+    const result = await assistantService.sendMessage(text, {
+      walletAddress: walletData?.address,
+      totalBalance: walletData?.totalBalance,
+      assets: walletData?.assets,
+      transactions: transactions.map((t) => ({
+        type: t.type,
+        counterparty: t.counterparty,
+        amount: t.amount,
+        usdValue: t.usdValue,
+        asset: t.asset,
+        timestamp: t.timestamp,
+        status: t.status,
+      })),
+    });
     addMsg({ role: "assistant", text: result.content });
     setLoading(false);
   };
@@ -1033,7 +1051,6 @@ export default function AssistantPage() {
           <h1 className="text-2xl font-semibold">AI Assistant</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">Ask questions or take action — forms open right here.</p>
         </div>
-        <DemoBadge />
       </div>
 
       <div className="assistant-shell flex flex-1 flex-col overflow-hidden">

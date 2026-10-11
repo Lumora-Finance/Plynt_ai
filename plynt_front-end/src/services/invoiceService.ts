@@ -1,12 +1,21 @@
-import { mockInvoices } from "@/data/mockInvoices";
-import type { Invoice, InvoiceDraft } from "@/types";
-const wait = (ms = 350) => new Promise((resolve) => setTimeout(resolve, ms));
-let invoices = [...mockInvoices];
+import type { Invoice } from "@/types";
+
+// Invoices are user-created — no hardcoded data. In a future version these
+// will be persisted to Supabase. For now they live in component state.
+let invoices: Invoice[] = [];
+
+const wait = (ms = 300) => new Promise((r) => setTimeout(r, ms));
+
 export const invoiceService = {
- async getInvoices(): Promise<Invoice[]> { await wait(); return invoices; },
- async getInvoice(id: string): Promise<Invoice | undefined> { await wait(180); return invoices.find((invoice) => invoice.id === id || invoice.number === id); },
- async createInvoice(draft: InvoiceDraft): Promise<Invoice> { await wait(700); const amount=draft.items.reduce((sum,item)=>sum+item.quantity*item.rate,0); const invoice:Invoice={...draft,id:`inv-${Date.now()}`,amount,status:"pending",createdAt:new Date().toISOString().slice(0,10),paymentLink:`plynt.finance/pay/${draft.number}`}; invoices=[invoice,...invoices]; return invoice; },
- async duplicateInvoice(id: string): Promise<Invoice | undefined> { const source=invoices.find((i)=>i.id===id); if(!source)return; await wait(); const copy={...source,id:`inv-${Date.now()}`,number:`${source.number}-COPY`,status:"draft" as const,createdAt:new Date().toISOString().slice(0,10)}; invoices=[copy,...invoices]; return copy; },
- async deleteInvoice(id: string): Promise<void> { await wait(); invoices=invoices.filter((i)=>i.id!==id); },
- async markPaid(id: string): Promise<Invoice | undefined> { await wait(); const invoice=invoices.find((i)=>i.id===id); if(invoice) invoice.status="paid"; return invoice; },
+  async getInvoices(): Promise<Invoice[]> { await wait(); return [...invoices]; },
+  async getInvoice(id: string): Promise<Invoice | undefined> { await wait(); return invoices.find((i) => i.id === id); },
+  async createInvoice(inv: Invoice): Promise<Invoice> { await wait(); invoices = [inv, ...invoices]; return inv; },
+  async updateInvoice(id: string, data: Partial<Invoice>): Promise<Invoice | undefined> {
+    await wait();
+    const idx = invoices.findIndex((i) => i.id === id);
+    if (idx === -1) return undefined;
+    invoices[idx] = { ...invoices[idx]!, ...data };
+    return invoices[idx];
+  },
+  async deleteInvoice(id: string): Promise<void> { await wait(); invoices = invoices.filter((i) => i.id !== id); },
 };

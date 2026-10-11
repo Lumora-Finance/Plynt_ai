@@ -1,50 +1,18 @@
-import { mockWallet } from "@/data/mockWallet";
-import type { AssetSymbol, TransactionDraft, Wallet } from "@/types";
-
-const wait = (ms = 350) => new Promise((resolve) => setTimeout(resolve, ms));
-
-export interface SendInput {
-  recipient: string;
-  amount: number;
-  asset: AssetSymbol;
-  memo?: string;
-}
+// walletService is kept for backwards compatibility but is no longer the source of truth.
+// Real wallet data comes from useWalletData hook (Monad RPC) and Privy embedded wallet.
+const wait = (ms = 400) => new Promise((r) => setTimeout(r, ms));
 
 export const walletService = {
-  async connectWallet(): Promise<Wallet> {
+  async getWallet() {
     await wait();
-    return { ...mockWallet, connected: true };
+    return null;
   },
-
-  async disconnectWallet(): Promise<{ connected: false }> {
-    await wait(200);
-    return { connected: false };
+  async createTransactionDraft(draft: unknown) {
+    await wait(300);
+    return draft;
   },
-
-  async getWalletBalance(): Promise<Wallet> {
-    await wait();
-    return mockWallet;
-  },
-
-  async createTransactionDraft(input: SendInput): Promise<TransactionDraft> {
-    await wait(250);
-    // Monad Testnet estimated gas fee ≈ 0.000021 MON (21 gwei × 21000 gas)
-    return { ...input, fee: 0.000021 };
-  },
-
-  async sendTransaction(
-    draft: TransactionDraft,
-  ): Promise<{ id: string; status: "demo-confirmed"; message: string }> {
-    await wait(850);
-    return {
-      id: `demo-${Date.now()}`,
-      status: "demo-confirmed",
-      message: `Demo transfer prepared for ${draft.amount} ${draft.asset}. No blockchain transaction was broadcast.`,
-    };
-  },
-
-  async createPaymentRequest(amount: number, asset: AssetSymbol) {
-    await wait(250);
-    return { id: `request-${Date.now()}`, amount, asset, status: "demo" as const };
+  async sendTransaction(params: unknown) {
+    await wait(600);
+    return { success: true, message: "Use Privy useSendTransaction hook for real sends.", params };
   },
 };

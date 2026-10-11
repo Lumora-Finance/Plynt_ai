@@ -3,7 +3,6 @@ import { useState } from "react";
 import {
   CalendarDays,
   CircleOff,
-  Clock,
   Pause,
   Play,
   Plus,
@@ -34,9 +33,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageIntro, DemoBadge, EmptyState, currency } from "@/components/shared/common";
+import { PageIntro, EmptyState, currency } from "@/components/shared/common";
 import { Reveal } from "@/components/shared/motion";
-import { mockRecurringPayments } from "@/data/mockRecurringPayments";
 import type { RecurringPayment } from "@/types";
 
 export const Route = createFileRoute("/recurring")({
@@ -58,7 +56,9 @@ const statusColors: Record<string, string> = {
 
 function StatusBadge({ status }: { status: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-600 capitalize ${statusColors[status] ?? ""}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-600 capitalize ${statusColors[status] ?? ""}`}
+    >
       <span className="size-1.5 rounded-full bg-current" />
       {status}
     </span>
@@ -105,7 +105,9 @@ function PaymentCard({
             {payment.nextPayment && (
               <div>
                 <p className="text-xs text-muted-foreground">Next payment</p>
-                <p className="mt-1 font-medium">{new Date(payment.nextPayment).toLocaleDateString()}</p>
+                <p className="mt-1 font-medium">
+                  {new Date(payment.nextPayment).toLocaleDateString()}
+                </p>
               </div>
             )}
             <div>
@@ -135,7 +137,12 @@ function PaymentCard({
                   Resume
                 </Button>
               )}
-              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => onCancel(payment.id)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() => onCancel(payment.id)}
+              >
                 <CircleOff className="size-4" />
                 Cancel
               </Button>
@@ -211,16 +218,22 @@ function CreatePaymentDialog({
     onOpenChange(false);
     setForm(defaultForm);
     setStep("form");
-    toast.success("Recurring payment created", { description: `${newPayment.name} will run ${newPayment.frequency}. [SIMULATED]` });
+    toast.success("Recurring payment created", {
+      description: `${newPayment.name} will run ${newPayment.frequency}.`,
+    });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{step === "form" ? "New recurring payment" : "Confirm payment schedule"}</DialogTitle>
+          <DialogTitle>
+            {step === "form" ? "New recurring payment" : "Confirm payment schedule"}
+          </DialogTitle>
           <DialogDescription>
-            {step === "form" ? "Set up a scheduled or recurring payment." : "Review details before activating."}
+            {step === "form"
+              ? "Set up a scheduled or recurring payment."
+              : "Review details before activating."}
           </DialogDescription>
         </DialogHeader>
 
@@ -228,21 +241,36 @@ function CreatePaymentDialog({
           <div className="space-y-4 py-2">
             <div className="grid gap-2">
               <Label>Payment name</Label>
-              <Input placeholder="e.g. Rent, Figma subscription" value={form.name} onChange={(e) => set("name", e.target.value)} />
+              <Input
+                placeholder="e.g. Rent, Figma subscription"
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
               <Label>Recipient</Label>
-              <Input placeholder="Name or wallet address" value={form.recipient} onChange={(e) => set("recipient", e.target.value)} />
+              <Input
+                placeholder="Name or wallet address"
+                value={form.recipient}
+                onChange={(e) => set("recipient", e.target.value)}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label>Amount</Label>
-                <Input type="number" placeholder="e.g. 500" value={form.amount} onChange={(e) => set("amount", e.target.value)} />
+                <Input
+                  type="number"
+                  placeholder="e.g. 500"
+                  value={form.amount}
+                  onChange={(e) => set("amount", e.target.value)}
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Asset</Label>
                 <Select value={form.asset} onValueChange={(v) => set("asset", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="USDC">USDC</SelectItem>
                     <SelectItem value="MON">MON</SelectItem>
@@ -255,7 +283,9 @@ function CreatePaymentDialog({
               <div className="grid gap-2">
                 <Label>Frequency</Label>
                 <Select value={form.frequency} onValueChange={(v) => set("frequency", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="daily">Daily</SelectItem>
                     <SelectItem value="weekly">Weekly</SelectItem>
@@ -267,30 +297,43 @@ function CreatePaymentDialog({
               </div>
               <div className="grid gap-2">
                 <Label>Start date</Label>
-                <Input type="date" value={form.startDate} onChange={(e) => set("startDate", e.target.value)} />
+                <Input
+                  type="date"
+                  value={form.startDate}
+                  onChange={(e) => set("startDate", e.target.value)}
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label>End date (optional)</Label>
-                <Input type="date" value={form.endDate} onChange={(e) => set("endDate", e.target.value)} />
+                <Input
+                  type="date"
+                  value={form.endDate}
+                  onChange={(e) => set("endDate", e.target.value)}
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Occurrences (optional)</Label>
-                <Input type="number" placeholder="e.g. 12" value={form.totalOccurrences} onChange={(e) => set("totalOccurrences", e.target.value)} />
+                <Input
+                  type="number"
+                  placeholder="e.g. 12"
+                  value={form.totalOccurrences}
+                  onChange={(e) => set("totalOccurrences", e.target.value)}
+                />
               </div>
             </div>
             <div className="grid gap-2">
               <Label>Memo (optional)</Label>
-              <Input placeholder="What is this payment for?" value={form.memo} onChange={(e) => set("memo", e.target.value)} />
+              <Input
+                placeholder="What is this payment for?"
+                value={form.memo}
+                onChange={(e) => set("memo", e.target.value)}
+              />
             </div>
           </div>
         ) : (
           <div className="space-y-4 py-2">
-            <div className="insight">
-              <p className="text-xs font-600 uppercase tracking-wide text-muted-foreground">SIMULATED — Demo mode</p>
-              <p className="mt-1 text-sm">No real Monad transaction will occur until live mode is enabled.</p>
-            </div>
             <div className="detail-list">
               {[
                 ["Name", form.name],
@@ -300,7 +343,7 @@ function CreatePaymentDialog({
                 ["Start date", form.startDate],
                 ...(form.endDate ? [["End date", form.endDate] as [string, string]] : []),
                 ...(form.memo ? [["Memo", form.memo] as [string, string]] : []),
-                ["Network", "Monad (Demo)"],
+                ["Network", "Monad"],
               ].map(([k, v]) => (
                 <div key={k}>
                   <span>{k}</span>
@@ -314,12 +357,21 @@ function CreatePaymentDialog({
         <DialogFooter>
           {step === "form" ? (
             <>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button onClick={() => setStep("confirm")} disabled={!form.name || !form.amount || !form.recipient}>Review</Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => setStep("confirm")}
+                disabled={!form.name || !form.amount || !form.recipient}
+              >
+                Review
+              </Button>
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={() => setStep("form")}>Back</Button>
+              <Button variant="outline" onClick={() => setStep("form")}>
+                Back
+              </Button>
               <Button onClick={handleConfirm} disabled={loading}>
                 {loading ? <RefreshCw className="animate-spin" /> : <Repeat />}
                 Activate payment
@@ -333,12 +385,13 @@ function CreatePaymentDialog({
 }
 
 function RecurringPage() {
-  const [payments, setPayments] = useState<RecurringPayment[]>(mockRecurringPayments);
+  const [payments, setPayments] = useState<RecurringPayment[]>([]);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [filter, setFilter] = useState("all");
 
-  const filtered = filter === "all" ? payments : payments.filter((p) => p.status === filter);
+  const filtered =
+    filter === "all" ? payments : payments.filter((p) => p.status === filter);
   const active = payments.filter((p) => p.status === "active");
   const totalMonthly = active
     .filter((p) => p.frequency === "monthly")
@@ -356,7 +409,9 @@ function RecurringPage() {
 
   const handleCancel = () => {
     if (!cancelId) return;
-    setPayments((ps) => ps.map((p) => (p.id === cancelId ? { ...p, status: "cancelled" } : p)));
+    setPayments((ps) =>
+      ps.map((p) => (p.id === cancelId ? { ...p, status: "cancelled" } : p)),
+    );
     setCancelId(null);
     toast("Payment cancelled");
   };
@@ -369,7 +424,12 @@ function RecurringPage() {
         <PageIntro
           title="Recurring Payments"
           description="Schedule and manage automatic recurring payments to anyone on Monad."
-          action={<DemoBadge />}
+          action={
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus />
+              New payment
+            </Button>
+          }
         />
       </Reveal>
 
@@ -378,7 +438,13 @@ function RecurringPage() {
           {[
             { label: "Active payments", value: active.length, icon: Repeat },
             { label: "Monthly total", value: currency(totalMonthly), icon: Wallet },
-            { label: "Next payment", value: active[0]?.nextPayment ? new Date(active[0].nextPayment).toLocaleDateString() : "—", icon: CalendarDays },
+            {
+              label: "Next payment",
+              value: active[0]?.nextPayment
+                ? new Date(active[0].nextPayment).toLocaleDateString()
+                : "—",
+              icon: CalendarDays,
+            },
           ].map((s) => (
             <section key={s.label} className="stat-card">
               <div className="flex items-start justify-between">
@@ -395,7 +461,13 @@ function RecurringPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex gap-2">
             {["all", "active", "paused", "completed", "cancelled"].map((f) => (
-              <Button key={f} variant={filter === f ? "default" : "outline"} size="sm" onClick={() => setFilter(f)} className="capitalize">
+              <Button
+                key={f}
+                variant={filter === f ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilter(f)}
+                className="capitalize"
+              >
                 {f}
               </Button>
             ))}
@@ -408,33 +480,60 @@ function RecurringPage() {
       </Reveal>
 
       <div className="space-y-4">
-        {filtered.length === 0 ? (
+        {payments.length === 0 ? (
+          <EmptyState
+            icon={Repeat}
+            title="No recurring payments yet"
+            description="Set up automatic recurring payments to rent, subscriptions, family, and more."
+            action={
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus />
+                New payment
+              </Button>
+            }
+          />
+        ) : filtered.length === 0 ? (
           <EmptyState
             icon={Repeat}
             title="No recurring payments found"
-            description="Set up automatic recurring payments to rent, subscriptions, family, and more."
-            action={<Button onClick={() => setCreateOpen(true)}><Plus />New payment</Button>}
+            description="No payments match this filter."
           />
         ) : (
           filtered.map((p, i) => (
             <Reveal key={p.id} delay={i * 40}>
-              <PaymentCard payment={p} onPause={handlePause} onResume={handleResume} onCancel={(id) => setCancelId(id)} />
+              <PaymentCard
+                payment={p}
+                onPause={handlePause}
+                onResume={handleResume}
+                onCancel={(id) => setCancelId(id)}
+              />
             </Reveal>
           ))
         )}
       </div>
 
-      <CreatePaymentDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={handleCreated} />
+      <CreatePaymentDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={handleCreated}
+      />
 
       <AlertDialog open={!!cancelId} onOpenChange={(o) => !o && setCancelId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel recurring payment?</AlertDialogTitle>
-            <AlertDialogDescription>This will permanently stop this payment. This cannot be undone.</AlertDialogDescription>
+            <AlertDialogDescription>
+              This will permanently stop this payment. This cannot be undone.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep it</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCancel} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Cancel payment</AlertDialogAction>
+            <AlertDialogAction
+              onClick={handleCancel}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cancel payment
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

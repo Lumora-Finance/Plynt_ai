@@ -39,9 +39,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { PageIntro, DemoBadge, EmptyState, currency } from "@/components/shared/common";
+import { PageIntro, EmptyState, currency } from "@/components/shared/common";
 import { Reveal } from "@/components/shared/motion";
-import { mockGifts } from "@/data/mockGifts";
 import type { Gift as GiftType } from "@/types";
 
 export const Route = createFileRoute("/gifts")({
@@ -346,7 +345,7 @@ function CreateGiftDialog({ open, onOpenChange, onCreated }: { open: boolean; on
 }
 
 function GiftsPage() {
-  const [gifts, setGifts] = useState<GiftType[]>(mockGifts);
+  const [gifts, setGifts] = useState<GiftType[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
 
@@ -374,7 +373,6 @@ function GiftsPage() {
         <PageIntro
           title="Gifts"
           description="Send programmable USDC gifts — time-locked, recurring, or one-time."
-          action={<DemoBadge />}
         />
       </Reveal>
 

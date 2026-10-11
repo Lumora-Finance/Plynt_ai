@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -42,9 +41,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { PageIntro, DemoBadge, EmptyState, currency } from "@/components/shared/common";
+import { PageIntro, EmptyState, currency } from "@/components/shared/common";
 import { Reveal } from "@/components/shared/motion";
-import { mockAutomations, mockAutomationExecutions } from "@/data/mockAutomations";
 import type { AutomationRule, AutomationExecution } from "@/types";
 
 export const Route = createFileRoute("/automations")({
@@ -75,7 +73,9 @@ const statusColors: Record<string, string> = {
 
 function AutomationStatusBadge({ status }: { status: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-600 capitalize ${statusColors[status] ?? ""}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-600 capitalize ${statusColors[status] ?? ""}`}
+    >
       <span className="size-1.5 rounded-full bg-current" />
       {status}
     </span>
@@ -200,7 +200,12 @@ function AutomationCard({
               </Button>
             )}
             {(rule.status === "active" || rule.status === "paused") && (
-              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => onCancel(rule.id)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() => onCancel(rule.id)}
+              >
                 <CircleOff className="size-4" />
                 Cancel
               </Button>
@@ -212,11 +217,19 @@ function AutomationCard({
   );
 }
 
-function ExecutionHistory({ rule, executions }: { rule: AutomationRule; executions: AutomationExecution[] }) {
+function ExecutionHistory({
+  rule,
+  executions,
+}: {
+  rule: AutomationRule;
+  executions: AutomationExecution[];
+}) {
   const ruleExecs = executions.filter((e) => e.automationId === rule.id);
   return (
     <div>
-      <h3 className="font-semibold">{rule.name} — Execution History</h3>
+      <h3 className="font-semibold">
+        {rule.name} — Execution History
+      </h3>
       <p className="mt-1 text-sm text-muted-foreground">{ruleExecs.length} executions recorded.</p>
       {ruleExecs.length === 0 ? (
         <p className="mt-6 text-sm text-muted-foreground">No executions yet.</p>
@@ -233,7 +246,11 @@ function ExecutionHistory({ rule, executions }: { rule: AutomationRule; executio
                   {currency(exec.amount)} {exec.asset}
                 </strong>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-600 capitalize ${exec.status === "success" ? "bg-emerald-50 text-emerald-700" : "bg-destructive/10 text-destructive"}`}
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-600 capitalize ${
+                    exec.status === "success"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-destructive/10 text-destructive"
+                  }`}
                 >
                   {exec.status}
                 </span>
@@ -274,12 +291,21 @@ const defaultForm: NewRuleForm = {
   occurrences: "",
 };
 
-function CreateRuleDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenChange: (o: boolean) => void; onCreated: (rule: AutomationRule) => void }) {
+function CreateRuleDialog({
+  open,
+  onOpenChange,
+  onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onCreated: (rule: AutomationRule) => void;
+}) {
   const [form, setForm] = useState<NewRuleForm>(defaultForm);
   const [step, setStep] = useState<"form" | "confirm">("form");
   const [loading, setLoading] = useState(false);
 
-  const set = (k: keyof NewRuleForm, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: keyof NewRuleForm, v: string | boolean) =>
+    setForm((f) => ({ ...f, [k]: v }));
 
   const handleConfirm = async () => {
     setLoading(true);
@@ -308,16 +334,22 @@ function CreateRuleDialog({ open, onOpenChange, onCreated }: { open: boolean; on
     onOpenChange(false);
     setForm(defaultForm);
     setStep("form");
-    toast.success("Automation created", { description: `${newRule.name} is now active. [SIMULATED — no real transaction]` });
+    toast.success("Automation created", {
+      description: `${newRule.name} is now active.`,
+    });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{step === "form" ? "Create money rule" : "Confirm automation"}</DialogTitle>
+          <DialogTitle>
+            {step === "form" ? "Create money rule" : "Confirm automation"}
+          </DialogTitle>
           <DialogDescription>
-            {step === "form" ? "Define how your money should move automatically." : "Review the details before activating this automation."}
+            {step === "form"
+              ? "Define how your money should move automatically."
+              : "Review the details before activating this automation."}
           </DialogDescription>
         </DialogHeader>
 
@@ -325,12 +357,18 @@ function CreateRuleDialog({ open, onOpenChange, onCreated }: { open: boolean; on
           <div className="space-y-4 py-2">
             <div className="grid gap-2">
               <Label>Rule name</Label>
-              <Input placeholder="e.g. Monthly Rent, Weekly Savings" value={form.name} onChange={(e) => set("name", e.target.value)} />
+              <Input
+                placeholder="e.g. Monthly Rent, Weekly Savings"
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
               <Label>Type</Label>
               <Select value={form.type} onValueChange={(v) => set("type", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="recurring_transfer">Recurring transfer</SelectItem>
                   <SelectItem value="auto_savings">Auto savings</SelectItem>
@@ -344,12 +382,19 @@ function CreateRuleDialog({ open, onOpenChange, onCreated }: { open: boolean; on
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label>Amount</Label>
-                <Input type="number" placeholder="e.g. 200" value={form.amount} onChange={(e) => set("amount", e.target.value)} />
+                <Input
+                  type="number"
+                  placeholder="e.g. 200"
+                  value={form.amount}
+                  onChange={(e) => set("amount", e.target.value)}
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Asset</Label>
                 <Select value={form.asset} onValueChange={(v) => set("asset", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="USDC">USDC</SelectItem>
                     <SelectItem value="MON">MON</SelectItem>
@@ -359,18 +404,28 @@ function CreateRuleDialog({ open, onOpenChange, onCreated }: { open: boolean; on
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Switch checked={form.isPercentage} onCheckedChange={(v) => set("isPercentage", v)} id="pct" />
+              <Switch
+                checked={form.isPercentage}
+                onCheckedChange={(v) => set("isPercentage", v)}
+                id="pct"
+              />
               <Label htmlFor="pct">Amount is a percentage of incoming payment</Label>
             </div>
             <div className="grid gap-2">
               <Label>Destination</Label>
-              <Input placeholder="Wallet address or label" value={form.destination} onChange={(e) => set("destination", e.target.value)} />
+              <Input
+                placeholder="Wallet address or label"
+                value={form.destination}
+                onChange={(e) => set("destination", e.target.value)}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label>Frequency</Label>
                 <Select value={form.frequency} onValueChange={(v) => set("frequency", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="daily">Daily</SelectItem>
                     <SelectItem value="weekly">Weekly</SelectItem>
@@ -382,36 +437,50 @@ function CreateRuleDialog({ open, onOpenChange, onCreated }: { open: boolean; on
               </div>
               <div className="grid gap-2">
                 <Label>Start date</Label>
-                <Input type="date" value={form.startDate} onChange={(e) => set("startDate", e.target.value)} />
+                <Input
+                  type="date"
+                  value={form.startDate}
+                  onChange={(e) => set("startDate", e.target.value)}
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label>End date (optional)</Label>
-                <Input type="date" value={form.endDate} onChange={(e) => set("endDate", e.target.value)} />
+                <Input
+                  type="date"
+                  value={form.endDate}
+                  onChange={(e) => set("endDate", e.target.value)}
+                />
               </div>
               <div className="grid gap-2">
                 <Label>No. of occurrences (optional)</Label>
-                <Input type="number" placeholder="e.g. 12" value={form.occurrences} onChange={(e) => set("occurrences", e.target.value)} />
+                <Input
+                  type="number"
+                  placeholder="e.g. 12"
+                  value={form.occurrences}
+                  onChange={(e) => set("occurrences", e.target.value)}
+                />
               </div>
             </div>
           </div>
         ) : (
           <div className="space-y-4 py-2">
-            <div className="insight">
-              <p className="text-xs font-600 uppercase tracking-wide text-muted-foreground">SIMULATED — Demo mode</p>
-              <p className="mt-1 text-sm">No real Monad transaction will be created. This automation is stored in demo state only.</p>
-            </div>
             <div className="detail-list">
               {[
                 ["Name", form.name],
                 ["Type", form.type.replace("_", " ")],
-                ["Amount", `${form.isPercentage ? `${form.amount}%` : currency(Number(form.amount))} ${form.asset}`],
+                [
+                  "Amount",
+                  `${form.isPercentage ? `${form.amount}%` : currency(Number(form.amount))} ${form.asset}`,
+                ],
                 ["Destination", form.destination || "—"],
                 ["Frequency", form.frequency],
                 ["Start date", form.startDate],
                 ...(form.endDate ? [["End date", form.endDate] as [string, string]] : []),
-                ...(form.occurrences ? [["Occurrences", form.occurrences] as [string, string]] : []),
+                ...(form.occurrences
+                  ? [["Occurrences", form.occurrences] as [string, string]]
+                  : []),
               ].map(([k, v]) => (
                 <div key={k}>
                   <span>{k}</span>
@@ -425,12 +494,21 @@ function CreateRuleDialog({ open, onOpenChange, onCreated }: { open: boolean; on
         <DialogFooter>
           {step === "form" ? (
             <>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button onClick={() => setStep("confirm")} disabled={!form.name || !form.amount || !form.destination}>Review</Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => setStep("confirm")}
+                disabled={!form.name || !form.amount || !form.destination}
+              >
+                Review
+              </Button>
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={() => setStep("form")}>Back</Button>
+              <Button variant="outline" onClick={() => setStep("form")}>
+                Back
+              </Button>
               <Button onClick={handleConfirm} disabled={loading}>
                 {loading ? <RefreshCw className="animate-spin" /> : <Zap />}
                 Activate automation
@@ -444,8 +522,8 @@ function CreateRuleDialog({ open, onOpenChange, onCreated }: { open: boolean; on
 }
 
 function AutomationsPage() {
-  const [rules, setRules] = useState<AutomationRule[]>(mockAutomations);
-  const [executions] = useState<AutomationExecution[]>(mockAutomationExecutions);
+  const [rules, setRules] = useState<AutomationRule[]>([]);
+  const [executions] = useState<AutomationExecution[]>([]);
   const [historyRule, setHistoryRule] = useState<AutomationRule | null>(null);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -481,7 +559,12 @@ function AutomationsPage() {
         <PageIntro
           title="Automations"
           description="Create programmable money rules that automatically control how your funds move."
-          action={<DemoBadge />}
+          action={
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus />
+              New rule
+            </Button>
+          }
         />
       </Reveal>
 
@@ -491,7 +574,11 @@ function AutomationsPage() {
           {[
             { label: "Active rules", value: active, icon: Activity },
             { label: "Total executions", value: executions.length, icon: Zap },
-            { label: "Automations saved", value: `${rules.filter((r) => r.type === "auto_savings").length} rules`, icon: Sparkles },
+            {
+              label: "Automations saved",
+              value: `${rules.filter((r) => r.type === "auto_savings").length} rules`,
+              icon: Sparkles,
+            },
           ].map((s) => (
             <section key={s.label} className="stat-card">
               <div className="flex items-start justify-between">
@@ -509,7 +596,13 @@ function AutomationsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex gap-2">
             {["all", "active", "paused", "completed", "cancelled"].map((f) => (
-              <Button key={f} variant={filter === f ? "default" : "outline"} size="sm" onClick={() => setFilter(f)} className="capitalize">
+              <Button
+                key={f}
+                variant={filter === f ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilter(f)}
+                className="capitalize"
+              >
                 {f}
               </Button>
             ))}
@@ -523,12 +616,23 @@ function AutomationsPage() {
 
       {/* Rule cards */}
       <div className="space-y-4">
-        {filtered.length === 0 ? (
+        {rules.length === 0 ? (
+          <EmptyState
+            icon={Zap}
+            title="No automations yet"
+            description="Create your first money rule to automate how your funds move."
+            action={
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus />
+                Create rule
+              </Button>
+            }
+          />
+        ) : filtered.length === 0 ? (
           <EmptyState
             icon={Zap}
             title="No automations found"
-            description="Create your first money rule to automate how your funds move."
-            action={<Button onClick={() => setCreateOpen(true)}><Plus />Create rule</Button>}
+            description="No automations match this filter."
           />
         ) : (
           filtered.map((rule, i) => (
@@ -547,7 +651,11 @@ function AutomationsPage() {
       </div>
 
       {/* Create dialog */}
-      <CreateRuleDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={handleCreated} />
+      <CreateRuleDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={handleCreated}
+      />
 
       {/* History dialog */}
       <Dialog open={!!historyRule} onOpenChange={(o) => !o && setHistoryRule(null)}>
@@ -556,7 +664,9 @@ function AutomationsPage() {
             <DialogTitle>Execution history</DialogTitle>
             <DialogDescription>Past runs for this automation rule.</DialogDescription>
           </DialogHeader>
-          {historyRule && <ExecutionHistory rule={historyRule} executions={executions} />}
+          {historyRule && (
+            <ExecutionHistory rule={historyRule} executions={executions} />
+          )}
         </DialogContent>
       </Dialog>
 
@@ -571,7 +681,10 @@ function AutomationsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep it</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCancel} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleCancel}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Yes, cancel it
             </AlertDialogAction>
           </AlertDialogFooter>

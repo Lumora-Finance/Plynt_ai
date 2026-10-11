@@ -1,87 +1,93 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useState } from 'react';
 import {
   Activity,
   ArrowDownLeft,
   ArrowUpRight,
   CalendarDays,
   ChartNoAxesCombined,
-  CheckCircle2,
   Clock3,
   FilePlus2,
   Gift,
+  Loader2,
   Sparkles,
   TrendingDown,
   TrendingUp,
   Wallet,
   Zap,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { PageIntro, DemoBadge, currency } from "@/components/shared/common";
-import { CountUp, Reveal } from "@/components/shared/motion";
-import { mockWallet } from "@/data/mockWallet";
-import { mockAnalytics } from "@/data/mockAnalytics";
-import { mockTransactions } from "@/data/mockTransactions";
-import { mockInvoices } from "@/data/mockInvoices";
-import { mockAutomations } from "@/data/mockAutomations";
-import { mockSalaryConfig } from "@/data/mockSalary";
-import { mockGifts } from "@/data/mockGifts";
-import { mockAiInsights } from "@/data/mockAssistant";
-import { BalanceChart, ChartFrame, DonutChart, FlowChart } from "@/components/analytics/charts";
-import { TransactionList } from "@/components/transactions/transaction-list";
-import { SendDialog, ReceiveDialog } from "@/components/wallet/wallet-flows";
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { PageIntro, currency } from '@/components/shared/common';
+import { CountUp, Reveal } from '@/components/shared/motion';
+import { BalanceChart, ChartFrame, DonutChart, FlowChart } from '@/components/analytics/charts';
+import { TransactionList } from '@/components/transactions/transaction-list';
+import { SendDialog, ReceiveDialog } from '@/components/wallet/wallet-flows';
+import { useWalletData } from '@/hooks/use-wallet-data';
+import { useTransactions } from '@/hooks/use-transactions';
+import { usePrivyUser } from '@/hooks/use-privy-user';
 
-export const Route = createFileRoute("/dashboard")({
+export const Route = createFileRoute('/dashboard')({
   head: () => ({
     meta: [
-      { title: "Dashboard — PLYNT" },
-      { name: "description", content: "Your Monad wallet, activity, invoices, and financial overview." },
-      { property: "og:title", content: "Dashboard — PLYNT" },
-      { property: "og:description", content: "Your Monad wallet, activity, invoices, and financial overview." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { title: 'Dashboard — PLYNT' },
+      { name: 'description', content: 'Your Monad wallet, activity, and financial overview.' },
+      { property: 'og:title', content: 'Dashboard — PLYNT' },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary_large_image' },
     ],
   }),
   component: DashboardPage,
 });
-
-const insightTypeStyles: Record<string, string> = {
-  info: "border-l-primary bg-muted",
-  warning: "border-l-amber-500 bg-amber-50 dark:bg-amber-950/20",
-  tip: "border-l-emerald-500 bg-emerald-50 dark:bg-emerald-950/20",
-  alert: "border-l-destructive bg-destructive/5",
-};
 
 function DashboardPage() {
   const nav = useNavigate();
   const [send, setSend] = useState(false);
   const [receive, setReceive] = useState(false);
 
-  const stats = [
-    { label: "Total balance", value: 12480.32, prefix: "$", decimals: 2, change: "+14.2%", icon: Wallet },
-    { label: "Income", value: mockAnalytics.income, prefix: "$", change: "+18.0%", icon: TrendingUp },
-    { label: "Expenses", value: mockAnalytics.expenses, prefix: "$", change: "−4.3%", icon: TrendingDown },
-    { label: "Pending invoices", value: 2450, prefix: "$", change: "2 open", icon: Clock3 },
-  ];
+  const { displayName, ready } = usePrivyUser();
+  const { data: wallet, loading: walletLoading } = useWalletData();
+  const { transactions, loading: txLoading } = useTransactions();
+
+  const totalBalance = wallet?.totalBalance ?? 0;
+  const assets = wallet?.assets ?? [];
+
+  // Derived from real transactions
+  const income = transactions
+    .filter((t) => t.type === 'incoming')
+    .reduce((s, t) => s + t.usdValue, 0);
+  const expenses = transactions
+    .filter((t) => t.type === 'outgoing' || t.type === 'payment')
+    .reduce((s, t) => s + t.usdValue, 0);
+
+  const loading = !ready || walletLoading;
+
+  const greetingHour = new Date().getHours();
+  const greeting = greetingHour < 12 ? 'Good morning' : greetingHour < 17 ? 'Good afternoon' : 'Good evening';
+
+  const firstName = displayName.split(' ')[0] ?? displayName;
 
   const actions = [
-    { title: "Send", description: "Send assets to another Monad wallet.", icon: ArrowUpRight, onClick: () => setSend(true) },
-    { title: "Receive", description: "Receive assets into your wallet.", icon: ArrowDownLeft, onClick: () => setReceive(true) },
-    { title: "Create invoice", description: "Request payment from a client.", icon: FilePlus2, onClick: () => nav({ to: "/invoices/new" }) },
-    { title: "Analytics", description: "Understand your financial activity.", icon: ChartNoAxesCombined, onClick: () => nav({ to: "/analytics" }) },
+    { title: 'Send', description: 'Send assets to another Monad wallet.', icon: ArrowUpRight, onClick: () => setSend(true) },
+    { title: 'Receive', description: 'Receive assets into your wallet.', icon: ArrowDownLeft, onClick: () => setReceive(true) },
+    { title: 'Create invoice', description: 'Request payment from a client.', icon: FilePlus2, onClick: () => nav({ to: '/invoices/new' }) },
+    { title: 'Analytics', description: 'Understand your financial activity.', icon: ChartNoAxesCombined, onClick: () => nav({ to: '/analytics' }) },
   ];
 
-  // Derived data for new sections
-  const activeAutomations = mockAutomations.filter((a) => a.status === "active");
-  const claimableGifts = mockGifts.filter((g) => g.direction === "received" && g.status === "available");
-  const upcomingGifts = mockGifts.filter((g) => g.status === "scheduled");
-  const savingsAuto = mockAutomations.find((a) => a.type === "auto_savings" && a.status === "active");
-  const savingsProgress = savingsAuto ? Math.round((savingsAuto.executedCount / (savingsAuto.occurrences ?? 12)) * 100) : 50;
+  if (loading) {
+    return (
+      <div className="flex min-h-64 items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
       <Reveal>
-        <PageIntro title="Good morning, Clement" description="Here's what's happening with your Monad activity." action={<DemoBadge />} />
+        <PageIntro
+          title={`${greeting}, ${firstName}`}
+          description="Here's your live Monad wallet activity."
+        />
       </Reveal>
 
       {/* Hero wallet */}
@@ -90,14 +96,14 @@ function DashboardPage() {
           <div>
             <p className="text-sm text-primary-foreground/70">Total portfolio balance</p>
             <p className="mt-2 text-4xl font-semibold tracking-normal md:text-5xl">
-              <CountUp value={mockWallet.totalBalance} prefix="$" decimals={2} />
+              <CountUp value={totalBalance} prefix="$" decimals={2} />
             </p>
-            <p className="mt-3 text-sm text-primary-foreground/70">Across USDC, MON, and WETH · Monad Testnet</p>
+            <p className="mt-3 text-sm text-primary-foreground/70">
+              {assets.map((a) => `${a.balance.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${a.symbol}`).join(' · ')} · Monad Testnet
+            </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setSend(true)}>
-              <ArrowUpRight />Send
-            </Button>
+            <Button variant="secondary" onClick={() => setSend(true)}><ArrowUpRight />Send</Button>
             <Button className="border border-primary-foreground/20 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" onClick={() => setReceive(true)}>
               <ArrowDownLeft />Receive
             </Button>
@@ -105,9 +111,14 @@ function DashboardPage() {
         </section>
       </Reveal>
 
-      {/* ── Financial Overview stats ── */}
+      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat, i) => (
+        {([
+          { label: 'Total balance', value: totalBalance, prefix: '$', decimals: 2, sub: 'Monad Testnet', icon: Wallet },
+          { label: 'Income', value: income, prefix: '$', sub: `${transactions.filter((t) => t.type === 'incoming').length} transactions`, icon: TrendingUp },
+          { label: 'Expenses', value: expenses, prefix: '$', sub: `${transactions.filter((t) => t.type === 'outgoing' || t.type === 'payment').length} transactions`, icon: TrendingDown },
+          { label: 'Transactions', value: transactions.length, prefix: '', sub: 'on-chain activity', icon: Activity },
+        ] as const).map((stat, i) => (
           <Reveal key={stat.label} delay={80 + i * 45}>
             <section className="stat-card">
               <div className="flex items-start justify-between">
@@ -115,11 +126,9 @@ function DashboardPage() {
                 <stat.icon className="size-5 text-primary" />
               </div>
               <p className="mt-5 text-2xl font-semibold">
-                <CountUp value={stat.value} prefix={stat.prefix} decimals={stat.decimals} />
+                <CountUp value={stat.value} prefix={stat.prefix} decimals={(stat as any).decimals} />
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                <span className="font-medium text-primary">{stat.change}</span> from last month
-              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{stat.sub}</p>
             </section>
           </Reveal>
         ))}
@@ -135,9 +144,7 @@ function DashboardPage() {
           {actions.map((action, i) => (
             <Reveal key={action.title} delay={i * 50}>
               <button className="quick-action" onClick={action.onClick}>
-                <span className="action-icon">
-                  <action.icon />
-                </span>
+                <span className="action-icon"><action.icon /></span>
                 <span>
                   <strong>{action.title}</strong>
                   <small>{action.description}</small>
@@ -148,58 +155,26 @@ function DashboardPage() {
         </div>
       </section>
 
-      {/* ── Money Automation section ── */}
+      {/* Automations placeholder */}
       <Reveal delay={60}>
         <section className="panel">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="section-title flex items-center gap-2">
-                <Zap className="size-5 text-primary" />
-                Money automation
+                <Zap className="size-5 text-primary" /> Money automation
               </h2>
-              <p className="section-subtitle">Active rules and upcoming scheduled events.</p>
+              <p className="section-subtitle">Set up rules, recurring payments, salary splits and gifts.</p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => nav({ to: "/automations" })}>
-              Manage rules
-            </Button>
+            <Button variant="outline" size="sm" onClick={() => nav({ to: '/automations' })}>Manage rules</Button>
           </div>
-
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
-              {
-                label: "Active automations",
-                value: activeAutomations.length,
-                sub: "money rules running",
-                icon: Activity,
-                onClick: () => nav({ to: "/automations" }),
-              },
-              {
-                label: "Next scheduled",
-                value: "Nov 1",
-                sub: "Rent · $1,200 USDC",
-                icon: CalendarDays,
-                onClick: () => nav({ to: "/recurring" }),
-              },
-              {
-                label: "Next salary",
-                value: new Date(mockSalaryConfig.nextPayment).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-                sub: `${currency(mockSalaryConfig.amount)} from ${mockSalaryConfig.employer}`,
-                icon: TrendingUp,
-                onClick: () => nav({ to: "/salary" }),
-              },
-              {
-                label: "Upcoming gifts",
-                value: upcomingGifts.length,
-                sub: claimableGifts.length > 0 ? `${claimableGifts.length} available to claim` : "scheduled",
-                icon: Gift,
-                onClick: () => nav({ to: "/gifts" }),
-              },
+              { label: 'Active automations', value: '—', sub: 'none set up yet', icon: Activity, to: '/automations' },
+              { label: 'Recurring payments', value: '—', sub: 'none scheduled', icon: CalendarDays, to: '/recurring' },
+              { label: 'Salary', value: '—', sub: 'not configured', icon: TrendingUp, to: '/salary' },
+              { label: 'Gifts', value: '—', sub: 'none scheduled', icon: Gift, to: '/gifts' },
             ].map((item) => (
-              <button
-                key={item.label}
-                onClick={item.onClick}
-                className="quick-action group flex-col items-start gap-2 text-left"
-              >
+              <button key={item.label} onClick={() => nav({ to: item.to as any })} className="quick-action group flex-col items-start gap-2 text-left">
                 <div className="flex w-full items-center justify-between">
                   <span className="text-xs text-muted-foreground">{item.label}</span>
                   <item.icon className="size-4 text-primary" />
@@ -211,50 +186,34 @@ function DashboardPage() {
               </button>
             ))}
           </div>
-
-          {/* Savings progress */}
-          {savingsAuto && (
-            <div className="mt-5 border-t border-border pt-5">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Savings progress — {savingsAuto.name}</span>
-                <span className="font-medium text-primary">{savingsProgress}%</span>
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full bg-primary transition-all duration-700"
-                  style={{ width: `${savingsProgress}%` }}
-                />
-              </div>
-              <p className="mt-1.5 text-xs text-muted-foreground">
-                {savingsAuto.executedCount} of {savingsAuto.occurrences ?? "∞"} executions · {currency(savingsAuto.amount * savingsAuto.executedCount)} saved
-              </p>
-            </div>
-          )}
         </section>
       </Reveal>
 
-      {/* ── AI Insights ── */}
+      {/* AI Insights placeholder */}
       <Reveal delay={70}>
         <section>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="section-title flex items-center gap-2">
-                <Sparkles className="size-5 text-primary" />
-                AI Insights
+                <Sparkles className="size-5 text-primary" /> AI Insights
               </h2>
-              <p className="section-subtitle">Observations based on your recent financial activity.</p>
+              <p className="section-subtitle">Ask the AI assistant about your wallet activity.</p>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => nav({ to: "/assistant" })}>
-              Ask AI Assistant
-            </Button>
+            <Button variant="ghost" size="sm" onClick={() => nav({ to: '/assistant' })}>Ask AI Assistant</Button>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {mockAiInsights.map((insight, i) => (
-              <Reveal key={insight.id} delay={i * 25}>
-                <div className={`insight border-l-2 ${insightTypeStyles[insight.type] ?? insightTypeStyles.info}`}>
-                  <p>{insight.text}</p>
-                </div>
-              </Reveal>
+            {transactions.length === 0 ? (
+              <div className="insight border-l-primary bg-muted col-span-full">
+                <p>No on-chain activity yet. Make your first transaction to see AI insights here.</p>
+              </div>
+            ) : [
+              income > 0 && `You've received ${currency(income)} on Monad Testnet.`,
+              expenses > 0 && `You've spent ${currency(expenses)} on Monad Testnet.`,
+              totalBalance > 0 && `Your current portfolio value is ${currency(totalBalance)}.`,
+            ].filter(Boolean).map((text, i) => (
+              <div key={i} className="insight border-l-primary bg-muted">
+                <p>{text as string}</p>
+              </div>
             ))}
           </div>
         </section>
@@ -263,43 +222,30 @@ function DashboardPage() {
       {/* Charts */}
       <div className="grid gap-4 xl:grid-cols-3">
         <Reveal className="xl:col-span-2">
-          <ChartFrame title="Balance over time" subtitle="Portfolio value over the last six months">
+          <ChartFrame title="Balance over time" subtitle="Portfolio value trend">
             <BalanceChart compact />
           </ChartFrame>
         </Reveal>
         <Reveal delay={70}>
           <ChartFrame title="Portfolio allocation" subtitle="Current asset distribution">
-            <DonutChart />
+            <DonutChart data={assets.map((a) => ({ name: a.symbol, value: a.allocation }))} />
           </ChartFrame>
         </Reveal>
         <Reveal className="xl:col-span-2">
-          <ChartFrame title="Income vs expenses" subtitle="Monthly settled activity">
+          <ChartFrame title="Income vs expenses" subtitle="On-chain activity">
             <FlowChart compact />
           </ChartFrame>
         </Reveal>
         <Reveal delay={70}>
           <section className="panel h-full">
             <h3 className="font-semibold">Invoice pulse</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Current payment requests</p>
-            <div className="mt-6 space-y-5">
-              <div>
-                <div className="flex justify-between text-sm">
-                  <span>Paid</span>
-                  <strong>{currency(mockInvoices.filter((i) => i.status === "paid").reduce((s, i) => s + i.amount, 0))}</strong>
-                </div>
-                <div className="mt-2 h-1.5 bg-muted">
-                  <div className="h-full w-[68%] bg-primary" />
-                </div>
-              </div>
-              <div className="detail-list compact">
-                <div><span>Pending</span><strong>1 invoice</strong></div>
-                <div><span>Overdue</span><strong>1 invoice</strong></div>
-                <div><span>Collection rate</span><strong>68%</strong></div>
-              </div>
-              <Button variant="outline" className="mt-5 w-full" onClick={() => nav({ to: "/invoices" })}>
-                Manage invoices
-              </Button>
+            <p className="mt-1 text-xs text-muted-foreground">Your payment requests</p>
+            <div className="mt-6 flex min-h-32 items-center justify-center">
+              <p className="text-sm text-muted-foreground">No invoices yet.</p>
             </div>
+            <Button variant="outline" className="mt-5 w-full" onClick={() => nav({ to: '/invoices' })}>
+              Create invoice
+            </Button>
           </section>
         </Reveal>
       </div>
@@ -310,14 +256,24 @@ function DashboardPage() {
           <div className="mb-4 flex items-end justify-between">
             <div>
               <h2 className="section-title">Recent transactions</h2>
-              <p className="section-subtitle">Latest activity across your wallet.</p>
+              <p className="section-subtitle">Latest on-chain activity from your wallet.</p>
             </div>
           </div>
-          <TransactionList transactions={mockTransactions} limit={5} onViewAll={() => nav({ to: "/transactions" })} />
+          {txLoading ? (
+            <div className="flex min-h-32 items-center justify-center">
+              <Loader2 className="size-6 animate-spin text-primary" />
+            </div>
+          ) : (
+            <TransactionList
+              transactions={transactions as any}
+              limit={5}
+              onViewAll={() => nav({ to: '/transactions' })}
+            />
+          )}
         </section>
       </Reveal>
 
-      <SendDialog open={send} onOpenChange={setSend} />
+      <SendDialog open={send} onOpenChange={setSend} assets={assets} />
       <ReceiveDialog open={receive} onOpenChange={setReceive} />
     </div>
   );

@@ -1,3 +1,11 @@
-import { mockAnalytics } from "@/data/mockAnalytics";
 import type { Analytics } from "@/types";
-export const analyticsService = { async getAnalytics(_period="30D"):Promise<Analytics>{ await new Promise((r)=>setTimeout(r,300)); return mockAnalytics; } };
+
+// Analytics are now derived from real on-chain data in useWalletData + useTransactions hooks.
+export const analyticsService = {
+  async getAnalytics(_period = "30D"): Promise<Analytics> {
+    return {
+      points: [], totalVolume: 0, income: 0, expenses: 0, netFlow: 0, averageTransaction: 0,
+      invoicePerformance: [], assetDistribution: [],
+    };
+  },
+};

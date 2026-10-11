@@ -25,9 +25,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { PageIntro, DemoBadge, currency } from "@/components/shared/common";
+import { PageIntro, currency } from "@/components/shared/common";
 import { Reveal } from "@/components/shared/motion";
-import { mockSalaryConfig, mockSalaryHistory } from "@/data/mockSalary";
 import type { SalaryConfig, SalaryRecord, SalarySplitRule } from "@/types";
 
 export const Route = createFileRoute("/salary")({
@@ -180,16 +179,40 @@ const statusCls: Record<string, string> = {
 };
 
 function SalaryPage() {
-  const [config, setConfig] = useState<SalaryConfig>(mockSalaryConfig);
-  const [history] = useState<SalaryRecord[]>(mockSalaryHistory);
+  const [config, setConfig] = useState<SalaryConfig | null>(null);
+  const [history] = useState<SalaryRecord[]>([]);
   const [editOpen, setEditOpen] = useState(false);
 
   const received = history.filter((h) => h.status === "received");
   const totalReceived = received.reduce((s, r) => s + r.amount, 0);
 
   const handleSaveRules = (rules: SalarySplitRule[]) => {
-    setConfig((c) => ({ ...c, distributionRules: rules }));
+    setConfig((c) => c ? { ...c, distributionRules: rules } : c);
   };
+
+  if (!config) {
+    return (
+      <div className="space-y-8">
+        <Reveal>
+          <PageIntro
+            title="Salary"
+            description="Track your salary history and configure automatic distribution rules."
+          />
+        </Reveal>
+        <Reveal delay={40}>
+          <div className="flex min-h-64 flex-col items-center justify-center gap-4 border border-dashed border-border p-8 text-center">
+            <Building2 className="size-10 text-primary" />
+            <div>
+              <h3 className="font-semibold">No salary configured yet</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Salary tracking and automatic distribution will appear here once configured.
+              </p>
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -197,7 +220,6 @@ function SalaryPage() {
         <PageIntro
           title="Salary"
           description="Track your salary history and configure automatic distribution rules."
-          action={<DemoBadge />}
         />
       </Reveal>
 
@@ -322,7 +344,7 @@ function SalaryPage() {
       <EditDistributionDialog
         open={editOpen}
         onOpenChange={setEditOpen}
-        config={config}
+        config={config!}
         onSave={handleSaveRules}
       />
     </div>

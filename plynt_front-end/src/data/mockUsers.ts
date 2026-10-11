@@ -1,2 +1,4 @@
 import type { User } from "@/types";
-export const mockUser: User = { id:"user-1", name:"Clement Raymond", username:"clement", email:"clement@plynt.finance", walletAddress:"GDKQ4AVP7DNTJOFMBWLU5P3K4XQZW7TMMFXGQDGVXHLVLQOQX2JCFLOW", joinedAt:"2025-11-14", initials:"CR", role:"Core contributor", avatar:"https://hackathon.monad.xyz/avatars/ff0e52de-2ef3-4f17-95d9-8577840b634d", avatarAnimated:"https://hackathon.monad.xyz/avatars/ff0e52de-2ef3-4f17-95d9-8577840b634d?motion=fastest" };
+export const mockUser: User = {
+  id: "", name: "", username: "", email: "", walletAddress: "", joinedAt: "", initials: "", role: "",
+};

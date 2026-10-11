@@ -4,9 +4,9 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { PageIntro, shorten } from "@/components/shared/common";
-import { mockTransactions } from "@/data/mockTransactions";
 import { TransactionList } from "@/components/transactions/transaction-list";
 import { usePrivyUser } from "@/hooks/use-privy-user";
+import { useTransactions } from "@/hooks/use-transactions";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -14,7 +14,6 @@ export const Route = createFileRoute("/profile")({
       { title: "Profile — PLYNT" },
       { name: "description", content: "View your PLYNT identity and financial activity." },
       { property: "og:title", content: "Profile — PLYNT" },
-      { property: "og:description", content: "View your PLYNT identity and financial activity." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -23,8 +22,8 @@ export const Route = createFileRoute("/profile")({
 });
 
 function Page() {
-  const { ready, displayName, initials, email, walletAddress, joinedAt } =
-    usePrivyUser();
+  const { ready, displayName, initials, email, walletAddress, joinedAt } = usePrivyUser();
+  const { transactions, loading: txLoading } = useTransactions();
 
   if (!ready) {
     return (
@@ -43,7 +42,7 @@ function Page() {
 
   return (
     <div className="space-y-7">
-      <PageIntro title="Profile" description="Your identity and activity across PLYNT." />
+      <PageIntro title="Profile" description="Your identity and on-chain activity across PLYNT." />
 
       {/* ── Identity card ── */}
       <section className="panel flex flex-col gap-6 sm:flex-row sm:items-center">
@@ -53,9 +52,7 @@ function Page() {
 
         <div className="flex-1">
           <h2 className="text-2xl font-semibold">{displayName}</h2>
-          {email && (
-            <p className="text-sm text-muted-foreground">{email}</p>
-          )}
+          {email && <p className="text-sm text-muted-foreground">{email}</p>}
 
           <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted-foreground">
             {walletAddress && (
@@ -87,12 +84,12 @@ function Page() {
         <h2 className="mt-4 section-title">Account activity</h2>
         <div className="detail-list mt-5">
           <div>
-            <span>Invoices created</span>
-            <strong>0</strong>
+            <span>On-chain transactions</span>
+            <strong>{txLoading ? "…" : transactions.length}</strong>
           </div>
           <div>
-            <span>Transactions reviewed</span>
-            <strong>{mockTransactions.length}</strong>
+            <span>Network</span>
+            <strong>Monad Testnet</strong>
           </div>
         </div>
       </section>
@@ -100,7 +97,13 @@ function Page() {
       {/* ── Recent activity ── */}
       <section>
         <h2 className="mb-4 section-title">Recent activity</h2>
-        <TransactionList transactions={mockTransactions} limit={3} />
+        {txLoading ? (
+          <div className="flex min-h-32 items-center justify-center">
+            <Loader2 className="size-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <TransactionList transactions={transactions as any} limit={3} />
+        )}
       </section>
     </div>
   );
