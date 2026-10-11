@@ -25,5 +25,21 @@ export default defineConfig({
   ],
   build: {
     target: "esnext",
+    rolldownOptions: {
+      // @stripe/stripe-js is a peer dependency of @stripe/crypto (pulled in by
+      // @privy-io/react-auth). It is loaded dynamically by the Stripe SDK at
+      // runtime and must not be bundled — mark it as external so Rolldown
+      // doesn't fail trying to resolve it.
+      external: ["@stripe/stripe-js"],
+    },
+  },
+  ssr: {
+    // Externalize all node_modules from the SSR bundle. Vite 8 + Rolldown is
+    // stricter than Rollup about unresolved imports in browser-only packages
+    // (e.g. @privy-io/react-auth, @stripe/crypto, @walletconnect/*). Setting
+    // `true` tells the SSR build to treat every dependency as external, which
+    // is the correct behaviour for a Node/edge server that has node_modules
+    // available at runtime.
+    external: true,
   },
 });
