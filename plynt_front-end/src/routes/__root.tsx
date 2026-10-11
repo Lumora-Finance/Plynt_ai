@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { AppShell } from "@/components/layout/app-shell";
 import { ThemeProvider } from "@/components/layout/theme-provider";
@@ -139,6 +139,29 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const appId = import.meta.env["VITE_PRIVY_APP_ID"] as string;
+
+  // PrivyProvider accesses localStorage at initialisation which crashes on the
+  // server. We defer it to the first client render using a mounted flag.
+  // On the server (and during the first render pass) we render a plain
+  // QueryClientProvider + Outlet so TanStack Router can still hydrate the
+  // page shell without Privy — Privy will mount immediately after hydration.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  if (!mounted) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <TooltipProvider delayDuration={250}>
+            <AppShell>
+              <Outlet />
+            </AppShell>
+            <Toaster richColors={false} />
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <PrivyProvider appId={appId} config={privyConfig}>
