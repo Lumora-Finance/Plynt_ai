@@ -1,10 +1,19 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+// Use bracket notation to satisfy `noUncheckedIndexedAccess` / `exactOptionalPropertyTypes`
+const supabaseUrl = import.meta.env["VITE_SUPABASE_URL"] as string | undefined;
+const supabaseAnonKey = import.meta.env["VITE_SUPABASE_ANON_KEY"] as string | undefined;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in .env");
+// Supabase is optional at runtime — if env vars aren't set the client is null.
+// Guards: always check `supabase !== null` before calling any Supabase method.
+export const supabase: SupabaseClient | null =
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey)
+    : null;
+
+if (!supabase) {
+  console.warn(
+    "[plynt] Supabase client not initialised — VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is missing from .env. " +
+      "Off-chain persistence features will be disabled.",
+  );
 }
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);

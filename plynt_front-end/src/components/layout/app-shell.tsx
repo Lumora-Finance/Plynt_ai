@@ -4,7 +4,6 @@ import {
   Bell,
   ChartNoAxesCombined,
   CircleHelp,
-  CircleUserRound,
   Gift,
   LayoutDashboard,
   Menu,
@@ -18,8 +17,10 @@ import {
   Zap,
   LogOut,
   UserRound,
+  Loader2,
 } from "lucide-react";
 import { useState } from "react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -39,44 +40,63 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
-import { mockUser } from "@/data/mockUsers";
-import { mockWallet } from "@/data/mockWallet";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+// ─── Nav items ────────────────────────────────────────────────────────────────
+
 const primary = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/wallet", label: "Wallet", icon: WalletCards },
-  { to: "/transactions", label: "Transactions", icon: ArrowLeftRight },
-  { to: "/invoices", label: "Invoices", icon: ReceiptText },
-  { to: "/automations", label: "Automations", icon: Zap },
-  { to: "/salary", label: "Salary", icon: TrendingUp },
-  { to: "/gifts", label: "Gifts", icon: Gift },
-  { to: "/recurring", label: "Recurring", icon: Repeat },
-  { to: "/analytics", label: "Analytics", icon: ChartNoAxesCombined },
-  { to: "/assistant", label: "AI Assistant", icon: Sparkles },
+  { to: "/dashboard",    label: "Dashboard",    icon: LayoutDashboard },
+  { to: "/wallet",       label: "Wallet",        icon: WalletCards },
+  { to: "/transactions", label: "Transactions",  icon: ArrowLeftRight },
+  { to: "/invoices",     label: "Invoices",      icon: ReceiptText },
+  { to: "/automations",  label: "Automations",   icon: Zap },
+  { to: "/salary",       label: "Salary",        icon: TrendingUp },
+  { to: "/gifts",        label: "Gifts",         icon: Gift },
+  { to: "/recurring",    label: "Recurring",     icon: Repeat },
+  { to: "/analytics",    label: "Analytics",     icon: ChartNoAxesCombined },
+  { to: "/assistant",    label: "AI Assistant",  icon: Sparkles },
 ] as const;
 
 const secondary = [
   { to: "/settings", label: "Settings", icon: Settings2 },
-  { to: "/help", label: "Help", icon: CircleHelp },
+  { to: "/help",     label: "Help",     icon: CircleHelp },
 ] as const;
 
 const titles: Record<string, string> = {
-  dashboard: "Dashboard",
-  wallet: "Wallet",
+  dashboard:    "Dashboard",
+  wallet:       "Wallet",
   transactions: "Transactions",
-  invoices: "Invoices",
-  automations: "Automations",
-  salary: "Salary",
-  gifts: "Gifts",
-  recurring: "Recurring Payments",
-  analytics: "Analytics",
-  assistant: "AI Assistant",
-  settings: "Settings",
-  profile: "Profile",
-  help: "Help",
+  invoices:     "Invoices",
+  automations:  "Automations",
+  salary:       "Salary",
+  gifts:        "Gifts",
+  recurring:    "Recurring Payments",
+  analytics:    "Analytics",
+  assistant:    "AI Assistant",
+  settings:     "Settings",
+  profile:      "Profile",
+  help:         "Help",
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Shorten an EVM address: 0x1234…5678 */
+function shortenAddress(addr: string, head = 6, tail = 4): string {
+  if (!addr) return "";
+  if (addr.length <= head + tail + 2) return addr;
+  return `${addr.slice(0, head)}…${addr.slice(-tail)}`;
+}
+
+/** Derive initials from an email or name */
+function initials(name?: string, email?: string): string {
+  if (name) return name.slice(0, 2).toUpperCase();
+  if (email) return email.slice(0, 2).toUpperCase();
+  return "PL";
+}
+
+// ─── Brand ────────────────────────────────────────────────────────────────────
 
 function Brand() {
   return (
@@ -89,6 +109,8 @@ function Brand() {
     </div>
   );
 }
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
 
 function Navigation({ close }: { close?: () => void }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
@@ -124,27 +146,61 @@ function Navigation({ close }: { close?: () => void }) {
   );
 }
 
+// ─── AppShell ─────────────────────────────────────────────────────────────────
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [menuOpen, setMenuOpen] = useState(false);
-  const segment = path.split("/")[1] || "dashboard";
 
-  // Landing page: render without nav chrome
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  const { ready, user } = useRequireAuth();
+  const { logout } = usePrivy();
+  const { wallets } = useWallets();
+
+  // Landing page: render without nav chrome, no auth check needed
   if (path === "/") {
     return <>{children}</>;
   }
 
-  // Mobile nav: show 5 most important routes
+  // While Privy is loading, show a minimal full-screen spinner
+  if (!ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // ── Derive user display info ───────────────────────────────────────────────
+  const email = user?.email?.address;
+  const googleName = user?.google?.name;
+  const displayName = googleName ?? email ?? "Plynt User";
+  const displayInitials = initials(googleName ?? undefined, email);
+
+  // First embedded wallet address (created on login)
+  const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
+  const walletAddress = embeddedWallet?.address ?? user?.wallet?.address ?? undefined;
+  const displayAddress = walletAddress ? shortenAddress(walletAddress) : "No wallet";
+
+  const handleLogout = async () => {
+    await logout();
+    toast("Signed out successfully");
+  };
+
+  const segment = path.split("/")[1] || "dashboard";
+
+  // Mobile nav: 5 most important routes
   const mobileNav = [
-    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/wallet", label: "Wallet", icon: WalletCards },
-    { to: "/automations", label: "Automate", icon: Zap },
-    { to: "/gifts", label: "Gifts", icon: Gift },
-    { to: "/assistant", label: "AI", icon: Sparkles },
+    { to: "/dashboard",   label: "Dashboard", icon: LayoutDashboard },
+    { to: "/wallet",      label: "Wallet",    icon: WalletCards },
+    { to: "/automations", label: "Automate",  icon: Zap },
+    { to: "/gifts",       label: "Gifts",     icon: Gift },
+    { to: "/assistant",   label: "AI",        icon: Sparkles },
   ] as const;
 
   return (
     <div className="relative min-h-screen text-foreground bg-background">
+
       {/* ── Backdrop ── */}
       <div
         className="pointer-events-none fixed inset-0 z-0"
@@ -161,11 +217,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             WebkitMaskImage: "linear-gradient(to bottom, transparent 0, #000 min(380px, 45%))",
           }}
         >
-          {/* Radial gradient base — dark vs light */}
           <div
             className="absolute inset-0 isolate dark:block hidden"
             style={{
-              backgroundImage: "radial-gradient(ellipse 2003.55px 741.89px at 50% calc(100% - 354.135px + 25%), rgb(20, 22, 36) 0%, rgb(13, 14, 21) 37.26%, rgb(8, 11, 14) 55.89%, rgb(5, 7, 6) 74.52%)",
+              backgroundImage:
+                "radial-gradient(ellipse 2003.55px 741.89px at 50% calc(100% - 354.135px + 25%), rgb(20, 22, 36) 0%, rgb(13, 14, 21) 37.26%, rgb(8, 11, 14) 55.89%, rgb(5, 7, 6) 74.52%)",
             }}
           >
             <div
@@ -181,7 +237,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div
             className="absolute inset-0 isolate dark:hidden block"
             style={{
-              backgroundImage: "radial-gradient(ellipse 2003.55px 741.89px at 50% calc(100% - 354.135px + 25%), rgb(225, 222, 255) 0%, rgb(235, 232, 255) 37.26%, rgb(244, 244, 248) 55.89%, rgb(244, 244, 248) 74.52%)",
+              backgroundImage:
+                "radial-gradient(ellipse 2003.55px 741.89px at 50% calc(100% - 354.135px + 25%), rgb(225, 222, 255) 0%, rgb(235, 232, 255) 37.26%, rgb(244, 244, 248) 55.89%, rgb(244, 244, 248) 74.52%)",
             }}
           >
             <div
@@ -194,11 +251,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }}
             />
           </div>
-          {/* Grid lines — darker in light mode */}
           <div
             className="absolute inset-0 dark:hidden"
             style={{
-              backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.07) 0 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.07) 0 1px, transparent 1px)",
+              backgroundImage:
+                "linear-gradient(to right, rgba(0,0,0,0.07) 0 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.07) 0 1px, transparent 1px)",
               backgroundSize: "80px 80px",
               backgroundPosition: "0 100%",
               opacity: 0.5,
@@ -207,7 +264,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div
             className="absolute inset-0 hidden dark:block"
             style={{
-              backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.09) 0 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.09) 0 1px, transparent 1px)",
+              backgroundImage:
+                "linear-gradient(to right, rgba(255,255,255,0.09) 0 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.09) 0 1px, transparent 1px)",
               backgroundSize: "80px 80px",
               backgroundPosition: "0 100%",
               opacity: 0.2,
@@ -215,14 +273,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
         </div>
       </div>
-      {/* Desktop sidebar */}
+
+      {/* ── Desktop sidebar ── */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border bg-sidebar lg:flex">
         <Brand />
         <Navigation />
       </aside>
 
       <div className="relative z-10 lg:pl-64">
-        {/* Header */}
+        {/* ── Header ── */}
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur-xl md:px-6">
           <div className="flex items-center gap-3">
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -256,7 +315,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   size="icon"
                   aria-label="Notifications"
                   className="relative min-h-11 min-w-11"
-                  onClick={() => toast("You're all caught up", { description: "No new wallet or invoice activity." })}
+                  onClick={() =>
+                    toast("You're all caught up", {
+                      description: "No new wallet or invoice activity.",
+                    })
+                  }
                 >
                   <Bell />
                   <span className="absolute right-2.5 top-2.5 size-1.5 rounded-full bg-primary" />
@@ -264,44 +327,76 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </TooltipTrigger>
               <TooltipContent>Notifications</TooltipContent>
             </Tooltip>
+
             <ThemeToggle />
+
+            {/* Wallet address pill */}
             <Button
               variant="outline"
-              className="hidden md:inline-flex"
-              onClick={() => toast("Wallet connected", { description: mockWallet.network })}
+              className="hidden md:inline-flex font-mono text-xs"
+              onClick={() => {
+                if (walletAddress) {
+                  navigator.clipboard?.writeText(walletAddress);
+                  toast("Wallet address copied", { description: walletAddress });
+                }
+              }}
             >
-              <Wallet />
-              <span>{mockWallet.connected ? "Connected" : "Connect wallet"}</span>
+              <Wallet className="size-4" />
+              <span>{displayAddress}</span>
             </Button>
+
+            {/* User menu */}
             <DropdownMenu>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="min-h-11 min-w-11" aria-label="Profile">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="min-h-11 min-w-11"
+                      aria-label="Profile"
+                    >
                       <Avatar className="size-8">
-                        <AvatarImage src={mockUser.avatar} alt={mockUser.name} />
-                        <AvatarFallback>{mockUser.initials}</AvatarFallback>
+                        <AvatarFallback>{displayInitials}</AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent>Profile</TooltipContent>
               </Tooltip>
+
               <DropdownMenuContent align="end" className="w-56">
                 <div className="px-2 py-2">
-                  <p className="text-sm font-medium">{mockUser.name}</p>
-                  <p className="text-xs text-muted-foreground">@{mockUser.username}</p>
+                  <p className="truncate text-sm font-medium">{displayName}</p>
+                  {email && (
+                    <p className="truncate text-xs text-muted-foreground">{email}</p>
+                  )}
+                  {walletAddress && (
+                    <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                      {shortenAddress(walletAddress)}
+                    </p>
+                  )}
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/profile"><UserRound />Profile</Link>
+                  <Link to="/profile">
+                    <UserRound />
+                    Profile
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/settings"><Settings2 />Settings</Link>
+                  <Link to="/settings">
+                    <Settings2 />
+                    Settings
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => toast("Demo session remains active")}>
-                  <LogOut />Sign out
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <LogOut />
+                  Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -313,7 +408,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {/* Mobile bottom nav */}
+      {/* ── Mobile bottom nav ── */}
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-background/95 px-2 py-1 backdrop-blur-xl lg:hidden">
         {mobileNav.map((item) => (
           <Link

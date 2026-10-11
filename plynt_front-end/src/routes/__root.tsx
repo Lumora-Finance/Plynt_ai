@@ -8,10 +8,12 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { PrivyProvider } from "@privy-io/react-auth";
 import { AppShell } from "@/components/layout/app-shell";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { privyConfig } from "@/lib/privy";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -38,12 +40,13 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
+  const err = error instanceof Error ? error : new Error(String(error));
+  console.error(err);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
+    reportLovableError(err, { boundary: "tanstack_root_error_component" });
+  }, [err]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -135,8 +138,20 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const appId = import.meta.env["VITE_PRIVY_APP_ID"] as string;
 
   return (
-    <QueryClientProvider client={queryClient}><ThemeProvider><TooltipProvider delayDuration={250}><AppShell><Outlet /></AppShell><Toaster richColors={false} /></TooltipProvider></ThemeProvider></QueryClientProvider>
+    <PrivyProvider appId={appId} config={privyConfig}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <TooltipProvider delayDuration={250}>
+            <AppShell>
+              <Outlet />
+            </AppShell>
+            <Toaster richColors={false} />
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </PrivyProvider>
   );
 }
