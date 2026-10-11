@@ -34,6 +34,10 @@ function WalletPage() {
     }
   };
 
+  // Show spinner while Privy is loading, while the embedded wallet is being
+  // created after first sign-in, or while RPC balances are in flight.
+  // This prevents the "No wallet found" empty state from flashing for signed-in
+  // users whose wallet just hasn't surfaced in the `wallets` array yet.
   if (loading) {
     return (
       <div className="flex min-h-64 items-center justify-center">
@@ -42,6 +46,8 @@ function WalletPage() {
     );
   }
 
+  // Only show the empty state after Privy is fully ready AND confirmed that
+  // this authenticated user genuinely has no embedded wallet.
   if (!address) {
     return (
       <div className="space-y-8">
