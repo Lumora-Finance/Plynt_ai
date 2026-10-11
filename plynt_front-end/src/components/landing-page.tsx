@@ -107,7 +107,7 @@ export function LandingPage() {
         <div>
           <h1
             className="text-5xl font-bold tracking-tight"
-            style={{ fontFamily: "var(--font-display)", color: "#FBFAF9" }}
+            style={{ fontFamily: "'Sancreek', serif", color: "#FBFAF9" }}
           >
             PLYNT
           </h1>

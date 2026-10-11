@@ -103,7 +103,7 @@ function Brand() {
     <div className="flex h-16 items-center gap-3 px-5">
       <img src="/plynt_logoo.png" alt="PLYNT" className="size-11 object-contain" />
       <div>
-        <p className="font-semibold leading-none">PLYNT</p>
+        <p className="font-semibold leading-none" style={{ fontFamily: "'Sancreek', serif" }}>PLYNT</p>
         <p className="mt-1 text-xs text-muted-foreground">AI Financial Workspace</p>
       </div>
     </div>
