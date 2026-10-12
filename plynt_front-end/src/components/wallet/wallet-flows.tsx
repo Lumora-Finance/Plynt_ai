@@ -239,7 +239,6 @@ export function SendDialog({
       ? assets
       : [
           { symbol: 'MON', balance: 0 },
-          { symbol: 'USDC', balance: 0 },
         ];
 
   const selectedAsset = availableAssets.find((a) => a.symbol === asset);
