@@ -30,19 +30,42 @@ Plynt is an AI-powered financial workspace built on [Monad](https://monad.xyz) t
 
 ## Features
 
-| Feature | Status |
+| Feature | Status | Powered by |
+|---|---|---|
+| Email & Google sign-in | ✅ Live | Privy |
+| Embedded EVM wallet — auto-created on login | ✅ Live | Privy |
+| Real-time MON + USDC balances | ✅ Live | Privy wallet address → Monad RPC |
+| On-chain transaction history (native + ERC20) | ✅ Live | Privy wallet address → Monad RPC |
+| Send MON & USDC — real on-chain signing | ✅ Live | Privy `useSendTransaction` |
+| Receive — QR code + copy address | ✅ Live | Privy embedded wallet address |
+| Invoice creation, management & payment links | ✅ Live | Supabase |
+| Programmable time-locked gifts | ✅ Live | Supabase |
+| Salary tracking & distribution rules | ✅ Live | Supabase |
+| AI financial assistant (natural language) | ✅ Live | Wallet context from Privy + Monad RPC |
+| Financial analytics & charts | ✅ Live | Derived from on-chain data |
+| Admin panel (role-based access) | ✅ Live | Supabase profiles table |
+| Dark / light theme | ✅ Live | — |
+
+---
+
+## How Privy Powers Plynt
+
+Privy is not just the auth layer — it is the wallet infrastructure the entire app is built on top of.
+
+| Privy Feature | How Plynt Uses It |
 |---|---|
-| Privy embedded wallet (email / social login) | ✅ Live |
-| Real-time MON + USDC balances via Monad RPC | ✅ Live |
-| On-chain transaction history (native + ERC20) | ✅ Live |
-| Send & receive on Monad Testnet | ✅ Live |
-| Invoice creation, management & payment links | ✅ Live · Supabase |
-| Programmable time-locked gifts | ✅ Live · Supabase |
-| Salary tracking & distribution rules | ✅ Live · Supabase |
-| AI financial assistant (natural language) | ✅ Live |
-| Financial analytics & charts | ✅ Live |
-| Admin panel (role-based access) | ✅ Live · Supabase |
-| Dark / light theme | ✅ Live |
+| Email OTP + Google OAuth | The only sign-in methods — no seed phrases, no extensions |
+| Embedded wallet (`createOnLogin`) | Every new user gets an EVM wallet on Monad Testnet automatically |
+| `useWallets()` | Exposes the embedded wallet address used for all RPC calls |
+| `useSendTransaction()` | Powers the Send modal — signs and broadcasts real MON + USDC transfers on Monad |
+| Wallet address as identity | The address is used to scan Monad RPC for live balances and transaction history |
+| Monad Testnet as default chain | Configured via `defineChain` with Chain ID 10143 — Privy routes all signing to Monad |
+| Custom appearance | Plynt's purple accent (`#836EF9`) and logo injected into the Privy auth modal |
+| MoonPay sandbox | Fiat on-ramp available in the Privy wallet UI (testnet sandbox mode) |
+
+> **In short:** the wallet address Privy creates is the source of truth for everything — balances, transaction history, send/receive flows. No MetaMask. No browser extension. No seed phrase management.
+
+---
 
 ---
 
