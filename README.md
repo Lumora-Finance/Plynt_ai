@@ -10,7 +10,7 @@
     <img src="https://img.shields.io/badge/Supabase-Connected-3ECF8E?style=flat-square&logo=supabase&logoColor=white" alt="Supabase" />
     <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 19" />
     <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
-    <img src="https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
+    <img src="https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
     <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License" />
   </p>
 
@@ -67,14 +67,12 @@ Privy is not just the auth layer — it is the wallet infrastructure the entire 
 
 ---
 
----
-
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
 | Framework | React 19 + TypeScript |
-| Build | Vite 6 + TanStack Start |
+| Build | Vite 8 + TanStack Start |
 | Routing | TanStack Router (file-based) |
 | Styling | Tailwind CSS v4 |
 | UI Components | shadcn/ui + Radix UI |
@@ -84,7 +82,7 @@ Privy is not just the auth layer — it is the wallet infrastructure the entire 
 | Auth + Wallet | Privy (`@privy-io/react-auth`) |
 | Blockchain | Monad Testnet (Chain ID 10143) |
 | Database | Supabase (Postgres + RLS) |
-| Package Manager | Bun |
+| Package Manager | npm / Node.js 20+ |
 
 ---
 
@@ -111,9 +109,9 @@ Plynt_ai/
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) (preferred) or Node.js 20+
-- A [Privy](https://privy.io) app — grab your App ID from the dashboard
-- A [Supabase](https://supabase.com) project — grab the URL and anon key
+- Node.js 20+
+- A [Privy](https://privy.io) app — get your App ID from the dashboard
+- A [Supabase](https://supabase.com) project — get the URL and anon key
 
 ### Installation
 
@@ -123,17 +121,17 @@ git clone https://github.com/Lumora-Finance/Plynt_ai.git
 cd Plynt_ai/plynt_front-end
 
 # Install dependencies
-bun install
+npm install
 
 # Start the development server
-bun dev
+npm run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173).
 
 ### Environment Variables
 
-Create a `.env` file in `plynt_front-end/`:
+Create a `.env` file inside `plynt_front-end/`:
 
 ```env
 # Privy — https://dashboard.privy.io → Settings → App ID
@@ -143,7 +141,7 @@ VITE_PRIVY_APP_ID=your_privy_app_id
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-# Supabase CLI access token (never exposed to the browser)
+# Supabase CLI access token (server-side only — never exposed to the browser)
 SUPABASE_ACCESS_TOKEN=your_supabase_access_token
 ```
 
@@ -154,17 +152,17 @@ cd plynt_front-end
 SUPABASE_ACCESS_TOKEN=your_token npx supabase db push --linked
 ```
 
-The migration at `supabase/migrations/` creates all required tables (`profiles`, `invoices`, `gifts`, `salary_config`, `salary_records`) with Row Level Security enabled.
+This migration creates all required tables (`profiles`, `invoices`, `gifts`, `salary_config`, `salary_records`) with Row Level Security enabled.
 
 ### Available Scripts
 
 | Command | Description |
 |---|---|
-| `bun dev` | Start the development server |
-| `bun run build` | Production build |
-| `bun run preview` | Preview the production build |
-| `bun run lint` | ESLint checks |
-| `bun run format` | Prettier formatting |
+| `npm run dev` | Start the development server |
+| `npm run build` | Production build |
+| `npm run preview` | Preview the production build |
+| `npm run lint` | ESLint checks |
+| `npm run format` | Prettier formatting |
 
 ---
 
@@ -179,10 +177,10 @@ Visit the live app. On the landing page click **Continue with Google** or **Cont
 After sign-in you land on the Dashboard. Your wallet address is shown in the top header bar. Copy it, go to [faucet.monad.xyz](https://faucet.monad.xyz), and claim free testnet MON. Return to Plynt — your balance updates live from the Monad RPC.
 
 ### Step 3 — Send & Receive
-Click **Send** on the Dashboard. Enter any Monad wallet address and an amount. The transaction is signed through your Privy embedded wallet and broadcast to Monad Testnet. An explorer link lets you verify the transaction on-chain instantly.
+Click **Send** on the Dashboard. Enter any Monad wallet address and an amount. The transaction is signed through your Privy embedded wallet via `useSendTransaction` and broadcast to Monad Testnet. An explorer link lets you verify the transaction on Monadscan instantly.
 
 ### Step 4 — Explore Transactions
-Head to **Transactions**. The app scans the last 2000 blocks for your native MON transfers and USDC ERC20 Transfer events in real time — no indexer, pure RPC.
+Head to **Transactions**. The app uses your Privy wallet address to scan the last 2000 blocks for native MON transfers and USDC ERC20 Transfer events in real time — no indexer, direct RPC calls to Monad.
 
 ### Step 5 — Create an Invoice
 Go to **Invoices → New Invoice**. Add client details, line items, amount, asset (USDC / MON / WETH), and due date. It saves to Supabase scoped to your Privy account. A shareable payment link is generated automatically.
@@ -201,7 +199,7 @@ Go to **AI Assistant**. Ask anything about your wallet:
 - *"Create an invoice for $500 USDC due next Friday"*
 - *"Send a gift of 100 USDC to my friend"*
 
-The assistant reads your live on-chain data and opens pre-filled action modals for supported flows.
+The assistant reads your live on-chain data (via your Privy wallet address + Monad RPC) and opens pre-filled action modals for supported flows.
 
 ### Step 9 — Unlock the Admin Panel
 The Admin Panel is visible only to users with the `admin` role. To grant yourself access:
@@ -218,10 +216,11 @@ UPDATE profiles SET role = 'admin' WHERE email = 'your@email.com';
 ## How It Works
 
 1. **Sign in** — Privy handles email / social login and creates an embedded EVM wallet on Monad automatically.
-2. **Dashboard** — Live MON + USDC balances fetched directly from the Monad RPC. No indexer required.
-3. **Transactions** — The app scans the last 2000 blocks for native MON transfers and ERC20 Transfer events.
-4. **Invoices / Gifts / Salary** — Stored in Supabase, scoped per user via their Privy DID.
-5. **AI Assistant** — Understands your wallet context (balances, transactions) and answers financial questions in plain English. Supported flows (create invoice, send money, create gift, set salary distribution) open inline modals pre-filled with the assistant's suggestions.
+2. **Dashboard** — Live MON + USDC balances fetched directly from the Monad RPC using the Privy wallet address.
+3. **Transactions** — The app scans the last 2000 blocks for native MON transfers and ERC20 Transfer events using the Privy wallet address.
+4. **Send** — `useSendTransaction` from Privy signs and broadcasts real transactions to Monad Testnet.
+5. **Invoices / Gifts / Salary** — Stored in Supabase, scoped per user via their Privy DID.
+6. **AI Assistant** — Reads live wallet data and answers financial questions in plain English. Supported flows open inline pre-filled modals.
 
 ---
 
@@ -229,7 +228,7 @@ UPDATE profiles SET role = 'admin' WHERE email = 'your@email.com';
 
 - [x] Privy embedded wallet + on-chain wallet balances
 - [x] On-chain transaction history (MON + ERC20)
-- [x] Send & receive flows
+- [x] Send & receive flows via Privy `useSendTransaction`
 - [x] Invoice CRUD with Supabase
 - [x] Programmable gifts with Supabase
 - [x] Salary tracking with Supabase
@@ -247,7 +246,7 @@ UPDATE profiles SET role = 'admin' WHERE email = 'your@email.com';
 1. Fork the repo and create a feature branch: `git checkout -b feat/your-feature`
 2. Follow existing TypeScript and component conventions
 3. Keep wallet/blockchain logic inside `hooks/` and `services/`
-4. Run `bun run lint` and `bun run build` before submitting
+4. Run `npm run lint` and `npm run build` before submitting
 5. Open a pull request with a clear description
 
 ---
