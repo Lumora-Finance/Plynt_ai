@@ -145,6 +145,53 @@ The migration at `supabase/migrations/` creates all required tables (`profiles`,
 
 ---
 
+## Try the Product — Judge Access Instructions
+
+Everything runs on Monad Testnet. No mainnet funds needed.
+
+### Step 1 — Sign In
+Visit the live app. On the landing page click **Continue with Google** or **Continue with Email**. [Privy](https://privy.io) creates an embedded EVM wallet on Monad Testnet automatically — no MetaMask or browser extension required.
+
+### Step 2 — Get Testnet MON
+After sign-in you land on the Dashboard. Your wallet address is shown in the top header bar. Copy it, go to [faucet.monad.xyz](https://faucet.monad.xyz), and claim free testnet MON. Return to Plynt — your balance updates live from the Monad RPC.
+
+### Step 3 — Send & Receive
+Click **Send** on the Dashboard. Enter any Monad wallet address and an amount. The transaction is signed through your Privy embedded wallet and broadcast to Monad Testnet. An explorer link lets you verify the transaction on-chain instantly.
+
+### Step 4 — Explore Transactions
+Head to **Transactions**. The app scans the last 2000 blocks for your native MON transfers and USDC ERC20 Transfer events in real time — no indexer, pure RPC.
+
+### Step 5 — Create an Invoice
+Go to **Invoices → New Invoice**. Add client details, line items, amount, asset (USDC / MON / WETH), and due date. It saves to Supabase scoped to your Privy account. A shareable payment link is generated automatically.
+
+### Step 6 — Send a Programmable Gift
+Go to **Gifts → Send a gift**. Set a recipient name, wallet address, amount, and an unlock date (the date they can first claim it). Add an optional expiry and message. Supports one-time or recurring gifts.
+
+### Step 7 — Configure Salary Distribution
+Go to **Salary**. Enter your employer name, salary amount, frequency, and split rules — e.g. 60% Personal · 20% Savings · 20% Rent. All stored in Supabase and visualised as an allocation bar.
+
+### Step 8 — Ask the AI Assistant
+Go to **AI Assistant**. Ask anything about your wallet:
+- *"How much MON do I have?"*
+- *"Show my biggest transactions"*
+- *"Give me a summary of my finances"*
+- *"Create an invoice for $500 USDC due next Friday"*
+- *"Send a gift of 100 USDC to my friend"*
+
+The assistant reads your live on-chain data and opens pre-filled action modals for supported flows.
+
+### Step 9 — Unlock the Admin Panel
+The Admin Panel is visible only to users with the `admin` role. To grant yourself access:
+
+1. Open your [Supabase project](https://supabase.com) → **SQL Editor**
+2. Run:
+```sql
+UPDATE profiles SET role = 'admin' WHERE email = 'your@email.com';
+```
+3. Refresh Plynt — the **Admin Panel** appears at the bottom of the sidebar. From there you can view all users, manage roles, and inspect platform data.
+
+---
+
 ## How It Works
 
 1. **Sign in** — Privy handles email / social login and creates an embedded EVM wallet on Monad automatically.
