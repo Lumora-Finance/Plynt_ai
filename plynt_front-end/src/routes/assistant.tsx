@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowUp,
+  ArrowDownLeft,
   BarChart3,
   CheckCircle2,
   ChevronDown,
@@ -39,7 +40,7 @@ import { assistantService } from "@/services/assistantService";
 import { useWalletData } from "@/hooks/use-wallet-data";
 import { useTransactions } from "@/hooks/use-transactions";
 import type { AssistantMessage, AssetSymbol } from "@/types";
-import { SendDialog } from "@/components/wallet/wallet-flows";
+import { SendDialog, ReceiveDialog } from "@/components/wallet/wallet-flows";
 
 export const Route = createFileRoute("/assistant")({
   head: () => ({
@@ -230,11 +231,11 @@ const categories = [
   {
     id: "actions", label: "Take Action", icon: Zap,
     chips: [
-      { text: "Create an invoice", flowId: "create_invoice" },
       { text: "Send money", flowId: "send_money" },
+      "Receive assets",
+      { text: "Create an invoice", flowId: "create_invoice" },
       { text: "Create a programmable gift", flowId: "create_gift" },
       { text: "Set up salary distribution", flowId: "set_salary_distribution" },
-      { text: "Set up an allowance", flowId: "create_allowance" },
     ] as ChipDef[],
   },
   {
@@ -689,6 +690,7 @@ export default function AssistantPage() {
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [sendOpen, setSendOpen] = useState(false);
   const [sendPrefill, setSendPrefill] = useState<Record<string, string>>({});
+  const [receiveOpen, setReceiveOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -783,6 +785,26 @@ export default function AssistantPage() {
   const askQuestion = async (text: string) => {
     if (loading) return;
     addMsg({ role: "user", text });
+
+    // Detect receive intent — open ReceiveDialog directly
+    const lower = text.toLowerCase();
+    if (
+      lower.includes("receive") ||
+      lower.includes("my address") ||
+      lower.includes("wallet address") ||
+      lower.includes("show qr") ||
+      lower.includes("deposit") ||
+      lower.includes("fund my wallet") ||
+      lower.includes("get paid")
+    ) {
+      addMsg({
+        role: "assistant",
+        text: `Here's your Monad wallet address${walletData?.address ? ` (${walletData.address.slice(0, 8)}…${walletData.address.slice(-6)})` : ""}. Opening your receive panel now 👇`,
+      });
+      setReceiveOpen(true);
+      return;
+    }
+
     setLoading(true);
     setSuggestionsOpen(false);
     const result = await assistantService.sendMessage(text, {
@@ -967,6 +989,7 @@ export default function AssistantPage() {
       <SendDialog
         open={sendOpen}
         onOpenChange={setSendOpen}
+        assets={walletData?.assets ?? []}
         initialDraft={sendPrefill.recipient ? {
           recipient: sendPrefill.recipient,
           amount: Number(sendPrefill.amount) || 0,
@@ -975,6 +998,8 @@ export default function AssistantPage() {
           memo: sendPrefill.memo !== "—" ? sendPrefill.memo : undefined,
         } : undefined}
       />
+
+      <ReceiveDialog open={receiveOpen} onOpenChange={setReceiveOpen} />
 
       {activeModal?.type === "invoice" && (
         <InlineInvoiceModal

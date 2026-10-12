@@ -1,50 +1,132 @@
-import { useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Check, Coins, Copy, Fuel, Loader2, QrCode, Share2, ShieldCheck, UserRound } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Check,
+  Coins,
+  Copy,
+  ExternalLink,
+  Fuel,
+  Loader2,
+  Share2,
+  ShieldCheck,
+  UserRound,
+  Wallet,
+} from 'lucide-react';
 import { toast } from 'sonner';
-import { useSendTransaction } from '@privy-io/react-auth';
+import { useSendTransaction, useFundWallet } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { usePrivyUser } from '@/hooks/use-privy-user';
 import type { AssetSymbol, TransactionDraft } from '@/types';
 import { shorten } from '@/components/shared/common';
 import type { WalletAsset } from '@/hooks/use-wallet-data';
 
-// Monad Testnet token contract addresses
+// ─── Token contracts ──────────────────────────────────────────────────────────
 const TOKEN_CONTRACTS: Record<string, string> = {
-  USDC: '0x534b2f3A21130d7a60830c2Df862319e593943A3', // Circle official
+  USDC: '0x534b2f3A21130d7a60830c2Df862319e593943A3',
 };
 
-// Simple ERC20 transfer ABI encoding
 function encodeERC20Transfer(to: string, amountWei: bigint): string {
-  // transfer(address,uint256) = 0xa9059cbb
   const paddedTo = to.slice(2).padStart(64, '0');
   const paddedAmount = amountWei.toString(16).padStart(64, '0');
   return '0xa9059cbb' + paddedTo + paddedAmount;
 }
 
-function QrPattern({ address }: { address: string }) {
-  // Generate a deterministic-ish pattern from address characters
-  const seed = address.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+// ─── Real QR code component ────────────────────────────────────────────────────
+function QRCode({ value }: { value: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!value || !canvasRef.current) return;
+    let cancelled = false;
+
+    import('qrcode').then((QR) => {
+      if (cancelled || !canvasRef.current) return;
+      QR.toCanvas(canvasRef.current, value, {
+        width: 180,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff',
+        },
+      }, (err) => {
+        if (!cancelled && !err) setReady(true);
+      });
+    });
+
+    return () => { cancelled = true; };
+  }, [value]);
+
   return (
-    <div aria-label="QR code for wallet address" className="qr-pattern grid aspect-square w-44 grid-cols-9 gap-1 border-8 border-card bg-card p-2">
-      {Array.from({ length: 81 }).map((_, i) => (
-        <span key={i} className={((i * 7 + seed + i % 5) % 3 === 0) ? 'bg-foreground' : 'bg-transparent'} />
-      ))}
+    <div className="flex items-center justify-center rounded-lg border border-border bg-white p-2">
+      <canvas
+        ref={canvasRef}
+        className={ready ? 'block' : 'hidden'}
+        aria-label="QR code for wallet address"
+      />
+      {!ready && (
+        <div className="flex size-[180px] items-center justify-center">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
     </div>
   );
 }
 
-export function ReceiveDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+// ─── ReceiveDialog ─────────────────────────────────────────────────────────────
+export function ReceiveDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const { walletAddress } = usePrivyUser();
+  const { fundWallet } = useFundWallet();
   const address = walletAddress ?? '';
 
   const copy = () => {
-    if (address) {
+    if (!address) return;
+    navigator.clipboard?.writeText(address);
+    toast.success('Wallet address copied');
+  };
+
+  const share = async () => {
+    if (!address) return;
+    if (navigator.share) {
+      await navigator.share({ title: 'My Monad Wallet', text: address });
+    } else {
       navigator.clipboard?.writeText(address);
-      toast.success('Wallet address copied');
+      toast('Address copied for sharing');
+    }
+  };
+
+  const handleFund = async () => {
+    if (!address) return;
+    try {
+      await fundWallet(address, {
+        // MoonPay sandbox — configured in privyConfig
+      });
+    } catch {
+      toast.error('Could not open funding modal');
     }
   };
 
@@ -52,40 +134,78 @@ export function ReceiveDialog({ open, onOpenChange }: { open: boolean; onOpenCha
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Receive assets</DialogTitle>
-          <DialogDescription>Share your Monad embedded wallet address to receive assets.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <ArrowDownLeft className="size-5 text-primary" />
+            Receive assets
+          </DialogTitle>
+          <DialogDescription>
+            Share your Monad embedded wallet address to receive MON or tokens.
+          </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col items-center gap-5 py-3">
-          {address ? (
-            <>
-              <QrPattern address={address} />
-              <code className="w-full break-all border border-border bg-muted p-3 text-center text-xs">
+
+        {address ? (
+          <div className="flex flex-col items-center gap-4 py-2">
+            {/* Real QR code */}
+            <QRCode value={address} />
+
+            {/* Address display */}
+            <div className="w-full">
+              <p className="mb-1 text-xs font-medium text-muted-foreground">Wallet address</p>
+              <code className="block w-full break-all rounded-md border border-border bg-muted px-3 py-2.5 text-center text-xs leading-relaxed">
                 {address}
               </code>
+            </div>
+
+            {/* Network badge */}
+            <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs text-primary">
+              <Wallet className="size-3" />
+              Monad Testnet · Privy Embedded Wallet
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex w-full gap-2">
+              <Button className="flex-1" onClick={copy}>
+                <Copy className="size-4" />
+                Copy address
+              </Button>
+              <Button variant="outline" onClick={share}>
+                <Share2 className="size-4" />
+                Share
+              </Button>
+            </div>
+
+            {/* Fund with Privy */}
+            <div className="w-full border-t border-border pt-3">
+              <p className="mb-2 text-xs text-muted-foreground">
+                Need testnet MON? Use the faucet or fund via MoonPay:
+              </p>
               <div className="flex gap-2">
-                <Button onClick={copy}>
-                  <Copy /> Copy address
+                <Button variant="outline" size="sm" className="flex-1" onClick={handleFund}>
+                  Fund wallet
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    navigator.clipboard?.writeText(address);
-                    toast('Address copied for sharing');
-                  }}
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => window.open('https://faucet.monad.xyz', '_blank')}
                 >
-                  <Share2 /> Share
+                  <ExternalLink className="size-3" />
+                  Monad Faucet
                 </Button>
               </div>
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">No wallet address found. Please sign in.</p>
-          )}
-        </div>
+            </div>
+          </div>
+        ) : (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            No wallet found. Please sign in to see your address.
+          </p>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
+// ─── SendDialog ────────────────────────────────────────────────────────────────
 export function SendDialog({
   open,
   onOpenChange,
@@ -97,41 +217,62 @@ export function SendDialog({
   initialDraft?: TransactionDraft;
   assets?: WalletAsset[];
 }) {
-  const [step, setStep] = useState<'form' | 'review' | 'done'>('form');
+  const [step, setStep] = useState<'form' | 'review' | 'sending' | 'done' | 'error'>('form');
   const [recipient, setRecipient] = useState(
-    initialDraft?.recipient === 'Recipient address required' ? '' : (initialDraft?.recipient ?? ''),
+    initialDraft?.recipient && initialDraft.recipient !== 'Recipient address required'
+      ? initialDraft.recipient
+      : '',
   );
   const [amount, setAmount] = useState(initialDraft?.amount?.toString() ?? '');
   const [asset, setAsset] = useState<AssetSymbol>(initialDraft?.asset ?? 'MON');
-  const [memo, setMemo] = useState('');
+  const [memo, setMemo] = useState(initialDraft?.memo ?? '');
   const [error, setError] = useState('');
   const [txHash, setTxHash] = useState('');
-  const [sending, setSending] = useState(false);
+
   const { sendTransaction } = useSendTransaction();
 
-  const fee = 0.00001;
   const MONAD_CHAIN_ID = 10143;
+  const fee = 0.000021;
 
-  const submit = async () => {
-    if (recipient.length < 20 || !recipient.startsWith('0x')) {
-      setError('Enter a valid Monad wallet address (0x…).');
-      return;
+  const availableAssets =
+    assets.length > 0
+      ? assets
+      : [
+          { symbol: 'MON', balance: 0 },
+          { symbol: 'USDC', balance: 0 },
+        ];
+
+  const selectedAsset = availableAssets.find((a) => a.symbol === asset);
+
+  const validate = () => {
+    if (!recipient.startsWith('0x') || recipient.length < 42) {
+      setError('Enter a valid Monad wallet address (0x… 42 characters).');
+      return false;
     }
     if (!amount || Number(amount) <= 0) {
       setError('Enter an amount greater than zero.');
-      return;
+      return false;
+    }
+    const balance = selectedAsset && 'balance' in selectedAsset ? (selectedAsset as WalletAsset).balance : 0;
+    if (balance > 0 && Number(amount) > balance) {
+      setError(`Insufficient balance. You have ${balance.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${asset}.`);
+      return false;
     }
     setError('');
-    setStep('review');
+    return true;
+  };
+
+  const submit = () => {
+    if (validate()) setStep('review');
   };
 
   const confirm = async () => {
-    setSending(true);
+    setStep('sending');
+    setError('');
     try {
       let hash: string | undefined;
 
       if (asset === 'MON') {
-        // Native MON transfer
         const valueWei = BigInt(Math.round(Number(amount) * 1e18));
         const result = await sendTransaction({
           to: recipient as `0x${string}`,
@@ -140,9 +281,8 @@ export function SendDialog({
         });
         hash = result?.hash;
       } else {
-        // ERC20 transfer
         const contractAddress = TOKEN_CONTRACTS[asset];
-        if (!contractAddress) throw new Error('Unsupported token');
+        if (!contractAddress) throw new Error(`${asset} is not supported on this network.`);
         const decimals = asset === 'USDC' ? 6 : 18;
         const amountWei = BigInt(Math.round(Number(amount) * 10 ** decimals));
         const result = await sendTransaction({
@@ -155,71 +295,82 @@ export function SendDialog({
 
       if (hash) setTxHash(hash);
       setStep('done');
-      toast.success('Transaction sent!', { description: hash ? `Tx: ${hash.slice(0, 16)}…` : undefined });
+      toast.success('Transaction sent!', {
+        description: hash ? `Tx: ${hash.slice(0, 10)}…${hash.slice(-6)}` : undefined,
+      });
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Transaction failed';
-      setError(msg);
-      toast.error('Transaction failed', { description: msg });
-    } finally {
-      setSending(false);
+      // User rejected — friendly message
+      const friendly = msg.toLowerCase().includes('reject') || msg.toLowerCase().includes('denied')
+        ? 'Transaction cancelled.'
+        : msg;
+      setError(friendly);
+      setStep('error');
+      toast.error('Transaction failed', { description: friendly });
     }
+  };
+
+  const reset = () => {
+    setStep('form');
+    setError('');
+    setTxHash('');
   };
 
   const close = (value: boolean) => {
     onOpenChange(value);
-    if (!value) setTimeout(() => { setStep('form'); setError(''); setTxHash(''); }, 200);
+    if (!value) setTimeout(reset, 200);
   };
-
-  const availableAssets = assets.length > 0 ? assets : [
-    { symbol: 'MON', balance: 0 },
-    { symbol: 'USDC', balance: 0 },
-    { symbol: 'WETH', balance: 0 },
-  ];
-  const selectedAsset = availableAssets.find((a) => a.symbol === asset);
 
   return (
     <Dialog open={open} onOpenChange={close}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {step === 'form' ? 'Send assets' : step === 'review' ? 'Review transaction' : 'Transaction sent'}
+          <DialogTitle className="flex items-center gap-2">
+            <ArrowUpRight className="size-5 text-primary" />
+            {step === 'form' && 'Send assets'}
+            {step === 'review' && 'Review transaction'}
+            {step === 'sending' && 'Sending…'}
+            {step === 'done' && 'Transaction sent!'}
+            {step === 'error' && 'Transaction failed'}
           </DialogTitle>
           <DialogDescription>
-            {step === 'form'
-              ? 'Send MON or tokens on Monad Testnet.'
-              : step === 'review'
-              ? 'Confirm every detail before broadcasting.'
-              : 'Your transaction has been broadcast to Monad.'}
+            {step === 'form' && 'Send MON or USDC on Monad Testnet via your Privy wallet.'}
+            {step === 'review' && 'Check every detail — transactions on Monad are irreversible.'}
+            {step === 'sending' && 'Signing and broadcasting via your Privy embedded wallet…'}
+            {step === 'done' && 'Your transaction has been broadcast to Monad Testnet.'}
+            {step === 'error' && 'Something went wrong. You can try again.'}
           </DialogDescription>
         </DialogHeader>
 
+        {/* ── Form ── */}
         {step === 'form' && (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="recipient">Recipient address</Label>
+              <Label htmlFor="send-recipient">Recipient address</Label>
               <Input
-                id="recipient"
+                id="send-recipient"
                 value={recipient}
-                onChange={(e) => setRecipient(e.target.value)}
-                placeholder="0x..."
-                className="mt-1.5"
+                onChange={(e) => { setRecipient(e.target.value); setError(''); }}
+                placeholder="0x…"
+                className="mt-1.5 font-mono text-sm"
               />
             </div>
             <div className="grid grid-cols-[1fr_130px] gap-3">
               <div>
-                <Label htmlFor="amount">Amount</Label>
+                <Label htmlFor="send-amount">Amount</Label>
                 <Input
-                  id="amount"
+                  id="send-amount"
                   type="number"
                   min="0"
+                  step="any"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={(e) => { setAmount(e.target.value); setError(''); }}
                   className="mt-1.5"
                 />
               </div>
               <div>
                 <Label>Asset</Label>
-                <Select value={asset} onValueChange={(v) => setAsset(v as AssetSymbol)}>
+                <Select value={asset} onValueChange={(v) => { setAsset(v as AssetSymbol); setError(''); }}>
                   <SelectTrigger className="mt-1.5">
                     <SelectValue />
                   </SelectTrigger>
@@ -234,71 +385,153 @@ export function SendDialog({
               </div>
             </div>
             <div>
-              <Label htmlFor="memo">Memo</Label>
+              <Label htmlFor="send-memo">Memo (optional)</Label>
               <Input
-                id="memo"
+                id="send-memo"
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
-                placeholder="Optional reference"
+                placeholder="e.g. Invoice #104"
                 className="mt-1.5"
               />
             </div>
-            <div className="detail-list compact">
-              <div>
-                <span>Available balance</span>
-                <strong>
-                  {selectedAsset?.balance != null
-                    ? selectedAsset.balance.toLocaleString(undefined, { maximumFractionDigits: 6 })
+
+            {/* Balance info */}
+            <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Available balance</span>
+                <span className="font-mono font-medium">
+                  {selectedAsset && 'balance' in selectedAsset
+                    ? (selectedAsset as WalletAsset).balance.toLocaleString(undefined, { maximumFractionDigits: 6 })
                     : '—'}{' '}
                   {asset}
-                </strong>
+                </span>
               </div>
-              <div><span>Network fee</span><strong>{fee} MON (est.)</strong></div>
-              <div><span>Estimated arrival</span><strong>~1 second</strong></div>
+              <div className="mt-1 flex justify-between">
+                <span className="text-muted-foreground">Estimated fee</span>
+                <span className="font-mono">{fee} MON</span>
+              </div>
+              <div className="mt-1 flex justify-between">
+                <span className="text-muted-foreground">Network</span>
+                <span className="font-medium text-primary">Monad Testnet</span>
+              </div>
             </div>
-            {error && <p role="alert" className="text-sm font-medium text-destructive">{error}</p>}
+
+            {error && (
+              <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+
             <Button className="w-full" onClick={submit}>
               Review transaction
             </Button>
           </div>
         )}
 
+        {/* ── Review ── */}
         {step === 'review' && (
           <div className="space-y-4">
-            <div className="review-row"><UserRound /><span>Recipient</span><strong>{shorten(recipient, 8, 7)}</strong></div>
-            <div className="review-row"><Coins /><span>Amount</span><strong>{Number(amount).toLocaleString()} {asset}</strong></div>
-            <div className="review-row"><Fuel /><span>Network fee</span><strong>~{fee} MON</strong></div>
-            <div className="review-row"><ShieldCheck /><span>Network</span><strong>Monad Testnet</strong></div>
-            {error && <p role="alert" className="text-sm font-medium text-destructive">{error}</p>}
+            <div className="divide-y divide-border rounded-md border border-border bg-muted/30">
+              {[
+                { icon: UserRound, label: 'To', value: shorten(recipient, 10, 8) },
+                { icon: Coins, label: 'Amount', value: `${Number(amount).toLocaleString()} ${asset}` },
+                { icon: Fuel, label: 'Network fee', value: `~${fee} MON` },
+                { icon: ShieldCheck, label: 'Network', value: 'Monad Testnet' },
+                ...(memo ? [{ icon: Coins, label: 'Memo', value: memo }] : []),
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Icon className="size-4" />
+                    {label}
+                  </span>
+                  <span className="font-medium">{value}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400">
+              This transaction will be signed by your Privy embedded wallet and broadcast to Monad Testnet. It cannot be reversed.
+            </div>
+
+            {error && (
+              <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+
             <DialogFooter>
-              <Button variant="outline" onClick={() => setStep('form')}>Back</Button>
-              <Button onClick={confirm} disabled={sending}>
-                {sending ? <><Loader2 className="size-4 animate-spin" /> Sending…</> : 'Confirm & send'}
+              <Button variant="outline" onClick={() => setStep('form')}>
+                Back
+              </Button>
+              <Button onClick={confirm}>
+                Confirm &amp; send
               </Button>
             </DialogFooter>
           </div>
         )}
 
+        {/* ── Sending ── */}
+        {step === 'sending' && (
+          <div className="flex flex-col items-center gap-4 py-8">
+            <div className="relative">
+              <div className="size-16 animate-spin rounded-full border-4 border-muted border-t-primary" />
+              <Wallet className="absolute inset-0 m-auto size-6 text-primary" />
+            </div>
+            <div className="text-center">
+              <p className="font-medium">Waiting for Privy confirmation…</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Check the Privy wallet prompt to confirm the transaction.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Done ── */}
         {step === 'done' && (
           <div className="flex flex-col items-center py-6 text-center">
             <span className="grid size-14 place-items-center rounded-full bg-secondary text-primary">
               <Check className="size-7" />
             </span>
             <h3 className="mt-4 text-lg font-semibold">Transaction sent!</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Your transaction has been broadcast to Monad Testnet.
+            <p className="mt-1 text-sm text-muted-foreground">
+              {Number(amount).toLocaleString()} {asset} → {shorten(recipient, 8, 6)}
             </p>
+            <p className="mt-1 text-xs text-muted-foreground">Broadcast to Monad Testnet via Privy</p>
             {txHash && (
               <a
                 href={`https://testnet.monadscan.com/tx/${txHash}`}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-3 text-xs text-primary underline-offset-4 hover:underline"
+                className="mt-3 flex items-center gap-1 text-xs text-primary underline-offset-4 hover:underline"
               >
-                View on Monadscan →
+                <ExternalLink className="size-3" />
+                View on Monadscan
               </a>
             )}
-            <Button className="mt-6" onClick={() => close(false)}>Done</Button>
+            <Button className="mt-6 w-full" onClick={() => close(false)}>
+              Done
+            </Button>
+          </div>
+        )}
+
+        {/* ── Error ── */}
+        {step === 'error' && (
+          <div className="flex flex-col items-center py-6 text-center">
+            <div className="grid size-14 place-items-center rounded-full bg-destructive/10 text-destructive">
+              <span className="text-2xl font-bold">!</span>
+            </div>
+            <h3 className="mt-4 text-lg font-semibold">Transaction failed</h3>
+            {error && (
+              <p className="mt-2 max-w-xs text-sm text-muted-foreground">{error}</p>
+            )}
+            <div className="mt-6 flex gap-2">
+              <Button variant="outline" onClick={() => close(false)}>
+                Close
+              </Button>
+              <Button onClick={() => setStep('review')}>
+                Try again
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>
@@ -306,11 +539,24 @@ export function SendDialog({
   );
 }
 
-export function WalletActionButtons({ onSend, onReceive }: { onSend: () => void; onReceive: () => void }) {
+// ─── WalletActionButtons ───────────────────────────────────────────────────────
+export function WalletActionButtons({
+  onSend,
+  onReceive,
+}: {
+  onSend: () => void;
+  onReceive: () => void;
+}) {
   return (
     <div className="flex gap-2">
-      <Button onClick={onSend}><ArrowUpRight className="size-4" />Send</Button>
-      <Button variant="outline" onClick={onReceive}><ArrowDownLeft className="size-4" />Receive</Button>
+      <Button onClick={onSend}>
+        <ArrowUpRight className="size-4" />
+        Send
+      </Button>
+      <Button variant="outline" onClick={onReceive}>
+        <ArrowDownLeft className="size-4" />
+        Receive
+      </Button>
     </div>
   );
 }
