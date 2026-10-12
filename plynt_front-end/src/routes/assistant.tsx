@@ -11,7 +11,6 @@ import {
   FileText,
   Gift,
   RefreshCw,
-  Repeat,
   Sparkles,
   TrendingUp,
   Wallet,
@@ -70,8 +69,6 @@ type ModalTrigger =
   | { type: "invoice"; prefill: Record<string, string> }
   | { type: "send"; prefill: Record<string, string> }
   | { type: "gift"; prefill: Record<string, string> }
-  | { type: "automation"; prefill: Record<string, string> }
-  | { type: "recurring"; prefill: Record<string, string> }
   | { type: "salary"; prefill: Record<string, string> };
 
 type Flow = {
@@ -109,6 +106,10 @@ type FlowState = {
 
 // ─── Flows ─────────────────────────────────────────────────────────────────────
 
+// Helper to safely read from flow data (satisfies noUncheckedIndexedAccess)
+type FlowData = Record<string, string>;
+const get = (d: FlowData, key: string, fallback = ""): string => d[key] ?? fallback;
+
 const flows: Record<string, Flow> = {
   create_invoice: {
     id: "create_invoice",
@@ -123,12 +124,12 @@ const flows: Record<string, Flow> = {
       { message: "Any notes for the client? (optional)", field: { key: "notes", label: "Notes", type: "text", placeholder: "e.g. Payment due within 14 days" } },
     ],
     buildConfirmSummary: (d) => ({
-      "Client": d.clientName ?? "",
-      "Email": d.clientEmail ?? "",
-      "Title": d.title ?? "",
-      "Amount": `${d.amount} ${d.asset ?? "USDC"}`,
-      "Due": d.dueDate ?? "",
-      ...(d.notes && d.notes !== "—" ? { "Notes": d.notes } : {}),
+      "Client": get(d, "clientName"),
+      "Email": get(d, "clientEmail"),
+      "Title": get(d, "title"),
+      "Amount": `${get(d, "amount")} ${get(d, "asset") || "USDC"}`,
+      "Due": get(d, "dueDate"),
+      ...(get(d, "notes") && get(d, "notes") !== "—" ? { "Notes": get(d, "notes") } : {}),
       "Network": "Monad (Demo)",
     }),
     confirmQuestion: "Here's your invoice. Open the invoice editor to review and send it?",
@@ -145,9 +146,9 @@ const flows: Record<string, Flow> = {
       { message: "Any memo? (optional — leave blank to skip)", field: { key: "memo", label: "Memo", type: "text", placeholder: "e.g. Invoice #104" } },
     ],
     buildConfirmSummary: (d) => ({
-      "To": d.recipient ?? "",
-      "Amount": `${d.amount} ${d.asset ?? "USDC"}`,
-      ...(d.memo && d.memo !== "—" ? { "Memo": d.memo } : {}),
+      "To": get(d, "recipient"),
+      "Amount": `${get(d, "amount")} ${get(d, "asset") || "USDC"}`,
+      ...(get(d, "memo") && get(d, "memo") !== "—" ? { "Memo": get(d, "memo") } : {}),
       "Network fee": "0.000021 MON",
       "Network": "Monad (Demo)",
     }),
@@ -168,57 +169,15 @@ const flows: Record<string, Flow> = {
       { message: "Add a personal message? (optional)", field: { key: "message", label: "Message", type: "text", placeholder: "e.g. Happy birthday! 🎂" } },
     ],
     buildConfirmSummary: (d) => ({
-      "To": d.recipient ?? "",
-      "Amount": `${d.amount} ${d.asset ?? "USDC"}`,
-      "Unlocks": d.unlockDate ?? "",
-      ...(d.expirationDate && d.expirationDate !== "—" ? { "Expires": d.expirationDate } : {}),
-      "Recurrence": d.recurring ?? "No — one-time",
-      ...(d.message && d.message !== "—" ? { "Message": d.message } : {}),
+      "To": get(d, "recipient"),
+      "Amount": `${get(d, "amount")} ${get(d, "asset") || "USDC"}`,
+      "Unlocks": get(d, "unlockDate"),
+      ...(get(d, "expirationDate") && get(d, "expirationDate") !== "—" ? { "Expires": get(d, "expirationDate") } : {}),
+      "Recurrence": get(d, "recurring") || "No — one-time",
+      ...(get(d, "message") && get(d, "message") !== "—" ? { "Message": get(d, "message") } : {}),
     }),
     confirmQuestion: "Open the gift creator with these details?",
     modal: (d) => ({ type: "gift", prefill: d }),
-  },
-
-  create_savings_rule: {
-    id: "create_savings_rule",
-    title: "Create a savings rule",
-    steps: [
-      { message: "How much to save — enter a fixed amount (e.g. 200) or percentage (e.g. 20%)?", field: { key: "amount", label: "Amount or %", type: "text", placeholder: "e.g. 200 or 20%", required: true } },
-      { message: "Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "MON", "WETH"] } },
-      { message: "Where should savings go?", field: { key: "destination", label: "Destination", type: "text", placeholder: "e.g. Savings wallet", required: true } },
-      { message: "How often?", field: { key: "frequency", label: "Frequency", type: "chips", options: ["On every payment", "Weekly", "Monthly"] } },
-      { message: "What should this rule be called?", field: { key: "name", label: "Rule name", type: "text", placeholder: "e.g. Auto savings 20%", required: true } },
-    ],
-    buildConfirmSummary: (d) => ({
-      "Name": d.name ?? "",
-      "Save": `${d.amount} ${d.asset ?? "USDC"}`,
-      "Destination": d.destination ?? "",
-      "Frequency": d.frequency ?? "",
-    }),
-    confirmQuestion: "Open the automation creator with these details?",
-    modal: (d) => ({ type: "automation", prefill: d }),
-  },
-
-  recurring_transfer: {
-    id: "recurring_transfer",
-    title: "Set up a recurring transfer",
-    steps: [
-      { message: "Who receives it?", field: { key: "recipient", label: "Recipient", type: "text", placeholder: "Name or address", required: true } },
-      { message: "How much per payment?", field: { key: "amount", label: "Amount", type: "number", placeholder: "e.g. 50", required: true } },
-      { message: "Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "MON", "WETH"] } },
-      { message: "How often?", field: { key: "frequency", label: "Frequency", type: "chips", options: ["Daily", "Weekly", "Biweekly", "Monthly"] } },
-      { message: "For how many payments? (leave blank for indefinite)", field: { key: "occurrences", label: "Occurrences", type: "number", placeholder: "e.g. 12" } },
-      { message: "When should it start?", field: { key: "startDate", label: "Start date", type: "date", required: true } },
-    ],
-    buildConfirmSummary: (d) => ({
-      "To": d.recipient ?? "",
-      "Amount": `${d.amount} ${d.asset ?? "USDC"}`,
-      "Frequency": d.frequency ?? "",
-      "Occurrences": d.occurrences && d.occurrences !== "—" ? d.occurrences : "Indefinite",
-      "Starts": d.startDate ?? "",
-    }),
-    confirmQuestion: "Open the recurring payment creator with these details?",
-    modal: (d) => ({ type: "recurring", prefill: d }),
   },
 
   set_salary_distribution: {
@@ -233,11 +192,11 @@ const flows: Record<string, Flow> = {
       { message: "What % to Family?", field: { key: "family", label: "Family %", type: "number", placeholder: "e.g. 10", required: true } },
     ],
     buildConfirmSummary: (d) => {
-      const s = Number(d.salary);
-      const p = Number(d.personal), sv = Number(d.savings), r = Number(d.rent), f = Number(d.family);
+      const s = Number(get(d, "salary"));
+      const p = Number(get(d, "personal")), sv = Number(get(d, "savings")), r = Number(get(d, "rent")), f = Number(get(d, "family"));
       const total = p + sv + r + f;
       return {
-        "Salary": `${d.asset ?? "USDC"} ${d.salary}/month`,
+        "Salary": `${get(d, "asset") || "USDC"} ${get(d, "salary")}/month`,
         "Personal": `${p}% → $${((s * p) / 100).toFixed(0)}`,
         "Savings": `${sv}% → $${((s * sv) / 100).toFixed(0)}`,
         "Rent": `${r}% → $${((s * r) / 100).toFixed(0)}`,
@@ -249,24 +208,6 @@ const flows: Record<string, Flow> = {
     modal: (d) => ({ type: "salary", prefill: d }),
   },
 
-  create_allowance: {
-    id: "create_allowance",
-    title: "Set up an automatic allowance",
-    steps: [
-      { message: "Who receives the allowance?", field: { key: "recipient", label: "Recipient", type: "text", placeholder: "e.g. Child, Family member", required: true } },
-      { message: "How much per payment?", field: { key: "amount", label: "Amount", type: "number", placeholder: "e.g. 50", required: true } },
-      { message: "Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "MON", "WETH"] } },
-      { message: "How often?", field: { key: "frequency", label: "Frequency", type: "chips", options: ["Weekly", "Biweekly", "Monthly"] } },
-      { message: "When should it start?", field: { key: "startDate", label: "Start date", type: "date", required: true } },
-    ],
-    buildConfirmSummary: (d) => ({
-      "To": d.recipient ?? "",
-      "Amount": `${d.amount} ${d.asset ?? "USDC"} ${(d.frequency ?? "").toLowerCase()}`,
-      "Starts": d.startDate ?? "",
-    }),
-    confirmQuestion: "Open the recurring payment creator with these details?",
-    modal: (d) => ({ type: "recurring", prefill: d }),
-  },
 };
 
 // ─── Category suggestions ──────────────────────────────────────────────────────
@@ -280,7 +221,7 @@ const categories = [
   },
   {
     id: "payments", label: "Payments", icon: CreditCard,
-    chips: ["Which invoices are unpaid?", "Show my recurring payments.", "What payments are coming up?", "Which invoices are overdue?", "How much am I waiting to receive?"] as ChipDef[],
+    chips: ["Which invoices are unpaid?", "What payments are coming up?", "Which invoices are overdue?", "How much am I waiting to receive?"] as ChipDef[],
   },
   {
     id: "portfolio", label: "Portfolio", icon: BarChart3,
@@ -291,8 +232,6 @@ const categories = [
     chips: [
       { text: "Create an invoice", flowId: "create_invoice" },
       { text: "Send money", flowId: "send_money" },
-      { text: "Create a savings rule", flowId: "create_savings_rule" },
-      { text: "Set up a recurring transfer", flowId: "recurring_transfer" },
       { text: "Create a programmable gift", flowId: "create_gift" },
       { text: "Set up salary distribution", flowId: "set_salary_distribution" },
       { text: "Set up an allowance", flowId: "create_allowance" },
@@ -388,13 +327,13 @@ function InlineInvoiceModal({
   onDone: () => void;
 }) {
   const [form, setForm] = useState({
-    clientName: prefill.clientName ?? "",
-    clientEmail: prefill.clientEmail ?? "",
-    title: prefill.title ?? "",
-    amount: prefill.amount ?? "",
-    asset: (prefill.asset ?? "USDC") as AssetSymbol,
-    dueDate: prefill.dueDate ?? "",
-    notes: prefill.notes !== "—" ? (prefill.notes ?? "") : "",
+    clientName: prefill["clientName"] ?? "",
+    clientEmail: prefill["clientEmail"] ?? "",
+    title: prefill["title"] ?? "",
+    amount: prefill["amount"] ?? "",
+    asset: (prefill["asset"] ?? "USDC") as AssetSymbol,
+    dueDate: prefill["dueDate"] ?? "",
+    notes: prefill["notes"] !== "—" ? (prefill["notes"] ?? "") : "",
     description: "",
   });
   const [loading, setLoading] = useState(false);
@@ -459,16 +398,16 @@ function InlineGiftModal({
   prefill: Record<string, string>;
   onDone: () => void;
 }) {
-  const isRecurring = prefill.recurring?.toLowerCase().startsWith("yes");
+  const isRecurring = prefill["recurring"]?.toLowerCase().startsWith("yes");
   const [form, setForm] = useState({
-    recipient: prefill.recipient ?? "",
-    amount: prefill.amount ?? "",
-    asset: (prefill.asset ?? "USDC") as AssetSymbol,
-    unlockDate: prefill.unlockDate ?? "",
-    expirationDate: prefill.expirationDate !== "—" ? (prefill.expirationDate ?? "") : "",
-    message: prefill.message !== "—" ? (prefill.message ?? "") : "",
+    recipient: prefill["recipient"] ?? "",
+    amount: prefill["amount"] ?? "",
+    asset: (prefill["asset"] ?? "USDC") as AssetSymbol,
+    unlockDate: prefill["unlockDate"] ?? "",
+    expirationDate: prefill["expirationDate"] !== "—" ? (prefill["expirationDate"] ?? "") : "",
+    message: prefill["message"] !== "—" ? (prefill["message"] ?? "") : "",
     isRecurring,
-    frequency: prefill.recurring?.includes("weekly") ? "weekly" : "monthly",
+    frequency: prefill["recurring"]?.includes("weekly") ? "weekly" : "monthly",
     recurrenceCount: "",
   });
   const [loading, setLoading] = useState(false);
@@ -536,157 +475,6 @@ function InlineGiftModal({
   );
 }
 
-/** Automation creation modal — pre-filled from AI flow data */
-function InlineAutomationModal({
-  open, onOpenChange, prefill, onDone,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  prefill: Record<string, string>;
-  onDone: () => void;
-}) {
-  const [form, setForm] = useState({
-    name: prefill.name ?? "",
-    amount: prefill.amount ?? "",
-    asset: (prefill.asset ?? "USDC") as AssetSymbol,
-    destination: prefill.destination ?? "",
-    frequency: prefill.frequency ?? "Monthly",
-  });
-  const [loading, setLoading] = useState(false);
-
-  const handleCreate = async () => {
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setLoading(false);
-    toast.success("Automation created", { description: `${form.name} — ${form.amount} ${form.asset} [SIMULATED]` });
-    onDone();
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Create money rule</DialogTitle>
-          <DialogDescription>Pre-filled from your conversation. Review before activating.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div className="grid gap-1.5"><Label>Rule name</Label><Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} /></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Amount or %</Label><Input value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} /></div>
-            <div className="grid gap-1.5">
-              <Label>Asset</Label>
-              <Select value={form.asset} onValueChange={(v) => setForm((f) => ({ ...f, asset: v as AssetSymbol }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{["USDC", "MON", "WETH"].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid gap-1.5"><Label>Destination</Label><Input value={form.destination} onChange={(e) => setForm((f) => ({ ...f, destination: e.target.value }))} /></div>
-          <div className="grid gap-1.5">
-            <Label>Frequency</Label>
-            <Select value={form.frequency} onValueChange={(v) => setForm((f) => ({ ...f, frequency: v }))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {["On every payment", "Daily", "Weekly", "Biweekly", "Monthly"].map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400">
-            Demo mode — no real transaction will be executed.
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleCreate} disabled={loading || !form.name || !form.amount}>
-            {loading ? <RefreshCw className="animate-spin size-4" /> : <Zap className="size-4" />}
-            Activate rule
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/** Recurring payment modal — pre-filled from AI */
-function InlineRecurringModal({
-  open, onOpenChange, prefill, onDone,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  prefill: Record<string, string>;
-  onDone: () => void;
-}) {
-  const [form, setForm] = useState({
-    name: prefill.recipient ? `Payment to ${prefill.recipient}` : "",
-    recipient: prefill.recipient ?? "",
-    amount: prefill.amount ?? "",
-    asset: (prefill.asset ?? "USDC") as AssetSymbol,
-    frequency: (prefill.frequency ?? "Monthly").toLowerCase(),
-    startDate: prefill.startDate ?? prefill.date ?? "",
-    occurrences: prefill.occurrences !== "—" ? (prefill.occurrences ?? "") : "",
-    memo: prefill.memo !== "—" ? (prefill.memo ?? "") : "",
-  });
-  const [loading, setLoading] = useState(false);
-
-  const handleCreate = async () => {
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setLoading(false);
-    toast.success("Recurring payment created", { description: `${form.amount} ${form.asset} to ${form.recipient} [SIMULATED]` });
-    onDone();
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Create recurring payment</DialogTitle>
-          <DialogDescription>Pre-filled from your conversation. Review before activating.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div className="grid gap-1.5"><Label>Payment name</Label><Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} /></div>
-          <div className="grid gap-1.5"><Label>Recipient</Label><Input value={form.recipient} onChange={(e) => setForm((f) => ({ ...f, recipient: e.target.value }))} /></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Amount</Label><Input type="number" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} /></div>
-            <div className="grid gap-1.5">
-              <Label>Asset</Label>
-              <Select value={form.asset} onValueChange={(v) => setForm((f) => ({ ...f, asset: v as AssetSymbol }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{["USDC", "MON", "WETH"].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5">
-              <Label>Frequency</Label>
-              <Select value={form.frequency} onValueChange={(v) => setForm((f) => ({ ...f, frequency: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {["daily", "weekly", "biweekly", "monthly", "quarterly"].map((f) => <SelectItem key={f} value={f} className="capitalize">{f}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-1.5"><Label>Start date</Label><Input type="date" value={form.startDate} onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))} /></div>
-          </div>
-          <div className="grid gap-1.5"><Label>Memo (optional)</Label><Input value={form.memo} onChange={(e) => setForm((f) => ({ ...f, memo: e.target.value }))} /></div>
-          <div className="rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400">
-            Demo mode — no real transaction will be executed.
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleCreate} disabled={loading || !form.recipient || !form.amount}>
-            {loading ? <RefreshCw className="animate-spin size-4" /> : <Repeat className="size-4" />}
-            Activate payment
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 /** Salary distribution modal — pre-filled from AI */
 function InlineSalaryModal({
   open, onOpenChange, prefill, onDone,
@@ -697,12 +485,12 @@ function InlineSalaryModal({
   onDone: () => void;
 }) {
   const [form, setForm] = useState({
-    salary: prefill.salary ?? "",
-    asset: (prefill.asset ?? "USDC") as AssetSymbol,
-    personal: prefill.personal ?? "60",
-    savings: prefill.savings ?? "20",
-    rent: prefill.rent ?? "10",
-    family: prefill.family ?? "10",
+    salary: prefill["salary"] ?? "",
+    asset: (prefill["asset"] ?? "USDC") as AssetSymbol,
+    personal: prefill["personal"] ?? "60",
+    savings: prefill["savings"] ?? "20",
+    rent: prefill["rent"] ?? "10",
+    family: prefill["family"] ?? "10",
   });
   const [loading, setLoading] = useState(false);
   const total = [form.personal, form.savings, form.rent, form.family].reduce((s, v) => s + Number(v), 0);
@@ -885,8 +673,6 @@ type ActiveModal =
   | { type: "invoice"; prefill: Record<string, string> }
   | { type: "send"; prefill: Record<string, string> }
   | { type: "gift"; prefill: Record<string, string> }
-  | { type: "automation"; prefill: Record<string, string> }
-  | { type: "recurring"; prefill: Record<string, string> }
   | { type: "salary"; prefill: Record<string, string> }
   | null;
 
@@ -1032,10 +818,7 @@ export default function AssistantPage() {
     const lower = text.toLowerCase();
     if (lower.includes("create invoice") || lower.includes("new invoice")) return startFlow("create_invoice");
     if (lower.includes("send money") || lower.includes("send ")) return startFlow("send_money");
-    if (lower.includes("savings rule") || lower.includes("auto save")) return startFlow("create_savings_rule");
-    if (lower.includes("recurring transfer")) return startFlow("recurring_transfer");
     if (lower.includes("create a gift") || lower.includes("send a gift") || lower.includes("programmable gift")) return startFlow("create_gift");
-    if (lower.includes("schedule a payment") || lower.includes("schedule payment")) return startFlow("recurring_transfer");
     if (lower.includes("salary distribution") || lower.includes("split my salary")) return startFlow("set_salary_distribution");
     if (lower.includes("allowance")) return startFlow("create_allowance");
 
@@ -1208,24 +991,6 @@ export default function AssistantPage() {
           onOpenChange={(o) => !o && setActiveModal(null)}
           prefill={activeModal.prefill}
           onDone={() => addMsg({ role: "assistant", text: "Gift created and scheduled! You can track it in the Gifts section." })}
-        />
-      )}
-
-      {activeModal?.type === "automation" && (
-        <InlineAutomationModal
-          open
-          onOpenChange={(o) => !o && setActiveModal(null)}
-          prefill={activeModal.prefill}
-          onDone={() => addMsg({ role: "assistant", text: "Automation rule activated! You can manage it in the Automations section." })}
-        />
-      )}
-
-      {activeModal?.type === "recurring" && (
-        <InlineRecurringModal
-          open
-          onOpenChange={(o) => !o && setActiveModal(null)}
-          prefill={activeModal.prefill}
-          onDone={() => addMsg({ role: "assistant", text: "Recurring payment scheduled! You can manage it in Recurring Payments." })}
         />
       )}
 

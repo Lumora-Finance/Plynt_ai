@@ -5,9 +5,9 @@ import { useEffect, useState, useCallback } from 'react';
 const MONAD_RPC = 'https://testnet-rpc.monad.xyz';
 
 // Token contracts on Monad Testnet
+// USDC: official Circle deployment — https://www.circle.com/blog/now-available-usdc-cctp-wallets-and-contracts-on-monad
 const TOKENS = [
-  { symbol: 'USDC', address: '0xf817257fed379853cDe0fa4F97AB987181B1E5Ea', decimals: 6, name: 'USD Coin' },
-  { symbol: 'WETH', address: '0xB5a30b0FDc5EA94A52fDC42e3E9760Cb8449Fb37', decimals: 18, name: 'Wrapped Ether' },
+  { symbol: 'USDC', address: '0x534b2f3A21130d7a60830c2Df862319e593943A3', decimals: 6, name: 'USD Coin' },
 ];
 
 // ERC20 balanceOf ABI calldata
@@ -80,21 +80,19 @@ export function useWalletData() {
             'latest',
           ]);
           const raw = BigInt(result);
-          return raw / BigInt(10 ** token.decimals);
+          return Number(raw) / 10 ** token.decimals;
         }),
       );
 
-      const usdcBalance = erc20Results[0]?.status === 'fulfilled' ? Number(erc20Results[0].value) : 0;
-      const wethBalance = erc20Results[1]?.status === 'fulfilled' ? Number(erc20Results[1].value) : 0;
+      const usdcResult0 = erc20Results[0];
+      const usdcBalance = usdcResult0?.status === 'fulfilled' ? Number(usdcResult0.value) : 0;
 
-      // Price approximations (MON testnet — use $0.189 as approximate)
+      // Price approximations (MON testnet)
       const MON_PRICE = 0.189;
-      const WETH_PRICE = 1950;
 
       const monUsd = monBalance * MON_PRICE;
-      const wethUsd = wethBalance * WETH_PRICE;
       const usdcUsd = usdcBalance; // USDC is 1:1
-      const total = monUsd + wethUsd + usdcUsd;
+      const total = monUsd + usdcUsd;
 
       const assets: WalletAsset[] = [
         {
@@ -116,16 +114,6 @@ export function useWalletData() {
           change: 0,
           allocation: total > 0 ? Math.round((usdcUsd / total) * 10000) / 100 : 0,
           issuer: 'Circle · ' + TOKENS[0].address,
-        },
-        {
-          id: 'weth',
-          name: 'Wrapped Ether',
-          symbol: 'WETH',
-          balance: wethBalance,
-          usdValue: wethUsd,
-          change: 0,
-          allocation: total > 0 ? Math.round((wethUsd / total) * 10000) / 100 : 0,
-          issuer: 'Monad Bridge · ' + TOKENS[1].address,
         },
       ];
 
@@ -163,20 +151,18 @@ export function useWalletData() {
               'latest',
             ]);
             const raw = BigInt(result);
-            return raw / BigInt(10 ** token.decimals);
+            return Number(raw) / 10 ** token.decimals;
           }),
         );
 
-        const usdcBalance = erc20Results[0]?.status === 'fulfilled' ? Number(erc20Results[0].value) : 0;
-        const wethBalance = erc20Results[1]?.status === 'fulfilled' ? Number(erc20Results[1].value) : 0;
+        const usdcResult1 = erc20Results[0];
+        const usdcBalance = usdcResult1?.status === 'fulfilled' ? Number(usdcResult1.value) : 0;
 
         const MON_PRICE = 0.189;
-        const WETH_PRICE = 1950;
 
         const monUsd = monBalance * MON_PRICE;
-        const wethUsd = wethBalance * WETH_PRICE;
         const usdcUsd = usdcBalance;
-        const total = monUsd + wethUsd + usdcUsd;
+        const total = monUsd + usdcUsd;
 
         const assets: WalletAsset[] = [
           {
@@ -198,16 +184,6 @@ export function useWalletData() {
             change: 0,
             allocation: total > 0 ? Math.round((usdcUsd / total) * 10000) / 100 : 0,
             issuer: 'Circle · ' + TOKENS[0].address,
-          },
-          {
-            id: 'weth',
-            name: 'Wrapped Ether',
-            symbol: 'WETH',
-            balance: wethBalance,
-            usdValue: wethUsd,
-            change: 0,
-            allocation: total > 0 ? Math.round((wethUsd / total) * 10000) / 100 : 0,
-            issuer: 'Monad Bridge · ' + TOKENS[1].address,
           },
         ];
 

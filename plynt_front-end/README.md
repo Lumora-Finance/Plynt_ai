@@ -1,122 +1,188 @@
-<div align="center">
+# Plynt
 
-# Stellix
+**AI-Powered Finance on Monad, Powered by Privy.**
 
-**AI-powered financial workspace built for the Stellar ecosystem.**
+Plynt is an AI-powered financial assistant built on Monad that uses Privy embedded wallets to make onchain finance accessible to everyone. It combines digital asset management, crypto payments, token swapping, asset conversion, invoicing, transaction tracking, and financial analytics in one intuitive platform.
 
-Stellix combines digital asset management, payments, invoicing, transactions, analytics, and an intelligent financial assistant in one platform. Users can manage assets like USDC, XLM, and EURC, send and receive payments, create invoices, track financial activity, and use natural language to understand their finances.
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-8.x-646CFF.svg)](https://vitejs.dev/)
-
-</div>
-
----
+Through Privy's wallet infrastructure and natural-language financial intelligence, Plynt aims to make managing digital assets and authorizing onchain transactions feel as simple as using a modern financial app.
 
 ## Overview
 
-Stellix brings AI-powered financial intelligence to the Stellar ecosystem, making onchain finance easier to understand, manage, and use. The application runs on demo data today and is structured for a clean transition to Supabase, the Stellar SDK, and Soroban smart contracts without needing to rebuild the UI.
+Plynt brings everyday financial activities into one seamless experience. Users can manage digital assets, send and receive payments, swap tokens, create invoices, track transactions, and understand their financial activity with the help of an AI assistant.
 
----
+**Built on Monad and integrated with Privy, Plynt focuses on three core principles:**
 
-## Features
+- **Accessible wallets:** Use Privy's embedded wallet infrastructure to reduce onboarding friction and eliminate the need for users to manage a separate wallet extension.
+- **Intelligent finance:** Use natural-language interactions to understand spending, analyze transactions, and prepare financial actions for review.
+- **Onchain payments:** Use Monad-compatible smart contracts and wallet transactions to support transparent, verifiable financial operations.
 
-### Wallet Management
-View your Stellar wallet address, check balances across USDC, XLM, and EURC, send and receive assets, and track portfolio changes over time. Every send and receive flow includes a confirmation step before anything is submitted.
+Plynt is designed for consumers who want the benefits of blockchain-powered finance without needing to understand the underlying infrastructure.
 
-### Transaction History
-Browse your full transaction history with search, filtering by asset, type, status, and date range. Each transaction opens in a detail view showing its hash, memo, and a direct link to the Stellar Explorer.
+## Core Features
+
+### Privy-Powered Wallet Experience
+
+Privy is Plynt's wallet infrastructure, supporting a familiar onboarding experience and embedded wallets.
+
+The intended wallet experience includes:
+
+- Email and supported social-login onboarding.
+- Embedded wallet creation and access.
+- Wallet address and digital asset management.
+- Transaction authorization and signing.
+- Integration with Monad-compatible transaction flows.
+- A simplified experience that reduces unnecessary wallet-related friction.
+
+Privy is used beyond authentication: its embedded wallet capabilities are intended to power the financial interactions users perform inside Plynt.
+
+### AI Financial Assistant
+
+Plynt helps users understand and manage their finances through natural-language interactions.
+
+Users can ask questions about spending, transaction history, portfolio distribution, and unpaid invoices. The assistant can provide financial insights and prepare supported transactions for user review.
+
+**Users remain in control of their funds.** AI-generated financial actions require appropriate user review and authorization before execution.
+
+### Digital Asset Management
+
+Provide a unified interface for viewing wallet information, managing supported digital assets, and accessing send and receive workflows.
+
+Wallet balances and transaction information should come from the connected wallet or verified data source when live integrations are enabled.
+
+### Crypto Payments
+
+Enable users to send and receive digital assets through an intuitive payment interface.
+
+The intended flow combines Privy wallet access and transaction signing with Monad settlement, allowing users to review payment details, authorize a transaction, and inspect its onchain status.
+
+### Token Swapping and Asset Conversion
+
+Support token swaps and conversion between compatible digital assets through supported swap infrastructure and liquidity providers.
+
+Availability depends on the selected assets, network support, and integrated provider.
 
 ### Invoice Management
-Create professional invoices with multiple line items, custom due dates, and asset selection. Track payment status across draft, pending, paid, and overdue states. Generate shareable payment links and keep all your billing in one place.
+
+Create and manage invoices with line items, payment assets, due dates, and payment statuses.
+
+The intended architecture supports shareable payment links and onchain settlement verification, allowing users to connect invoicing with digital asset payments.
+
+### Transaction History
+
+Browse transactions with search, filters, status information, and transaction details.
+
+Where available, display transaction hashes and links to the Monad block explorer so users can independently verify onchain activity.
 
 ### Financial Analytics
-Get a clear picture of your financial activity through interactive charts covering balance over time, income vs. expenses, transaction volume, and asset distribution. Filter by 7D, 30D, 90D, or 1Y. Charts animate as they enter the viewport.
 
-### AI Assistant
-Ask questions about your wallet and activity in plain language. The assistant can summarize spending, surface unpaid invoices, and pull insights from your data. It can help you draft a transaction for review but will never execute anything on its own.
+Help users understand their finances with visualizations for portfolio distribution, balance changes, income, expenses, and transaction activity.
 
-### Settings and Profile
-Manage your profile, wallet connection, notification preferences, security settings, and appearance (light, dark, or system theme), all saved across sessions.
+Support date filters such as 7D, 30D, 90D, and 1Y where the underlying data permits.
+
+### Profile and Settings
+
+Provide profile management, appearance preferences, notification settings, and wallet-related controls in one consistent interface.
 
 ---
 
-## Tech Stack
+## How Plynt Works
+
+Plynt combines AI-assisted financial interactions, Privy wallet infrastructure, and Monad blockchain settlement.
+
+1. **Onboard:** Users access Plynt through supported authentication methods and Privy's wallet experience.
+2. **Manage:** Users view their assets and explore financial activity through Plynt's interface.
+3. **Ask:** Users interact with the AI assistant to understand their finances or prepare supported financial actions.
+4. **Review:** Users inspect payment details and authorize transactions.
+5. **Settle:** Supported transactions are signed through the configured wallet infrastructure and submitted to Monad.
+6. **Verify:** Transaction status and hashes are displayed when available, allowing users to verify settlement onchain.
+
+The exact behavior of each step depends on the integrations implemented and enabled in the deployed application.
+
+---
+
+## Technology Stack
 
 | Layer | Technology |
 |---|---|
-| Framework | [React 19](https://react.dev/) + [TypeScript 5](https://www.typescriptlang.org/) |
-| Build Tool | [Vite 8](https://vitejs.dev/) |
-| Routing | [TanStack Router](https://tanstack.com/router) |
-| Styling | [Tailwind CSS v4](https://tailwindcss.com/) |
-| UI Components | [shadcn/ui](https://ui.shadcn.com/) + [Radix UI](https://www.radix-ui.com/) |
-| Charts | [Recharts](https://recharts.org/) |
-| Icons | [Lucide React](https://lucide.dev/) |
-| Forms | [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/) |
-| Notifications | [Sonner](https://sonner.emilkowal.ski/) |
-| Data Fetching | [TanStack Query](https://tanstack.com/query) |
+| Frontend | React 19 + TypeScript |
+| Build Tool | Vite |
+| Routing | TanStack Router |
+| Styling | Tailwind CSS |
+| UI Components | shadcn/ui + Radix UI |
+| Icons | Lucide React |
+| Charts | Recharts |
+| Forms | React Hook Form + Zod |
+| Data Fetching | TanStack Query |
+| Wallet Infrastructure | Privy |
+| Blockchain | Monad |
+| Smart Contracts | Solidity and EVM-compatible tooling |
+| Backend and Persistence | Supabase |
+| AI | AI integration for natural-language financial assistance |
 
----
-
-## Project Structure
-
-```
-stellix-frontend/
-├── src/
-│   ├── components/         # Feature and UI components
-│   │   ├── analytics/      # Chart components
-│   │   ├── invoices/       # Invoice form and preview
-│   │   ├── layout/         # App shell, sidebar, header, theme
-│   │   ├── shared/         # Motion, status, and common components
-│   │   ├── transactions/   # Transaction list and detail
-│   │   ├── ui/             # Base shadcn/ui components
-│   │   └── wallet/         # Send, receive, and wallet flows
-│   ├── data/               # Decoupled mock data
-│   │   ├── mockAnalytics.ts
-│   │   ├── mockAssistant.ts
-│   │   ├── mockInvoices.ts
-│   │   ├── mockTransactions.ts
-│   │   ├── mockUsers.ts
-│   │   └── mockWallet.ts
-│   ├── routes/             # TanStack Router file-based routes
-│   ├── services/           # Service layer (mock today, SDK-ready tomorrow)
-│   │   ├── analyticsService.ts
-│   │   ├── assistantService.ts
-│   │   ├── invoiceService.ts
-│   │   ├── transactionService.ts
-│   │   └── walletService.ts
-│   ├── types/              # Shared TypeScript types
-│   └── lib/                # Utilities and helpers
-├── public/
-├── roadmap.md
-└── package.json
-```
+The stack above describes the intended architecture. Integrations should be marked as implemented only when they are operational in the application.
 
 ---
 
 ## Architecture
 
-### Service Layer
+Plynt separates the user interface, business logic, data services, wallet operations, and blockchain interactions to keep the application maintainable.
 
-All data access goes through `src/services/`. Components never import mock data directly; they call service functions that return typed responses. This keeps the mock layer fully replaceable. Switching to Supabase or the Stellar SDK only requires changes inside those service files, nothing in the UI.
-
+```text
+Plynt Frontend
+      |
+      v
+Application Service Layer
+      |
+      +---- AI Financial Assistant
+      |
+      +---- Supabase Data Services
+      |
+      +---- Privy Wallet Infrastructure
+      |          |
+      |          +---- Embedded Wallet Access
+      |          +---- Transaction Signing
+      |
+      +---- Monad Network
+                 |
+                 +---- Onchain Payments
+                 +---- Smart Contracts
+                 +---- Transaction Verification
 ```
-Component -> Service -> (mock data | Supabase | Stellar SDK)
-```
 
-### Planned Integrations
+### Privy Integration
 
-These integration points are already stubbed in the service layer and ready to wire up:
+Privy provides the wallet infrastructure that connects Plynt's consumer-facing interface to onchain financial activity.
 
-- **Supabase** - authentication, user profiles, invoice persistence, and notification delivery
-- **Stellar SDK** - wallet connection, balance queries, and transaction submission
-- **Soroban smart contracts** - on-chain invoice settlement and payment verification
+Its role extends beyond authentication to the embedded wallet experience and, where implemented, transaction signing and wallet-powered interactions.
 
-### Design System
+Plynt's application services coordinate financial workflows, while users retain control over transaction authorization.
 
-The entire application uses a strict two-color identity: **Gold** and **Milk**, across both light and dark mode. No other brand colors exist anywhere in the codebase.
+### Monad Integration
+
+Monad provides the EVM-compatible blockchain environment for supported onchain financial operations.
+
+Plynt is designed to use Monad for transaction settlement, smart contract interactions, and onchain verification.
+
+### Supabase Integration
+
+Supabase supports application data such as profiles, invoices, and other persistent records. Wallet operations and blockchain settlement remain separate from ordinary application data storage.
+
+### AI Integration
+
+The AI assistant interprets financial questions, summarizes available data, and prepares supported actions for user review. AI responses alone do not constitute transaction authorization.
+
+---
+
+## Design System
+
+Plynt uses a purple-centered visual identity for a modern, approachable financial experience.
+
+- **Primary purple:** `#8270FF`
+- **Light-mode purple:** `#6E54FF`
+
+The interface prioritizes clear financial information, responsive layouts, accessible controls, and a familiar consumer finance experience.
+
+The goal is to make the blockchain infrastructure feel natural rather than exposing users to unnecessary technical complexity.
 
 ---
 
@@ -124,15 +190,20 @@ The entire application uses a strict two-color identity: **Gold** and **Milk**, 
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 20 or later
-- npm 10 or later (or [bun](https://bun.sh/))
+- Node.js 20 or later.
+- npm or another supported package manager.
+- A Privy application configured for the intended authentication and wallet flows.
+- A Monad network configuration for live blockchain features.
+- Supabase credentials if the application uses Supabase services.
 
-### Running locally
+### Installation
 
-```sh
+```bash
 # Clone the repository
-git clone https://github.com/Lumora-Finance/Stellix_front-end.git
-cd stellix-frontend
+git clone <YOUR_PLYNT_GITHUB_REPOSITORY_URL>
+
+# Enter the project directory
+cd plynt-frontend
 
 # Install dependencies
 npm install
@@ -141,7 +212,23 @@ npm install
 npm run dev
 ```
 
-The app will be available at `http://localhost:3000`.
+Open the local URL printed by Vite, typically `http://localhost:5173`.
+
+### Environment Configuration
+
+Configure the environment variables required by your actual integrations.
+
+For example:
+
+```env
+VITE_PRIVY_APP_ID=your_privy_app_id
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+Use the exact variable names expected by your implementation. Never expose server secrets, private keys, or privileged API credentials in frontend environment variables.
+
+For live wallet transactions, configure the supported Monad network and wallet settings in accordance with the relevant SDK documentation.
 
 ### Available Scripts
 
@@ -149,93 +236,85 @@ The app will be available at `http://localhost:3000`.
 |---|---|
 | `npm run dev` | Start the development server |
 | `npm run build` | Build for production |
-| `npm run preview` | Preview the production build locally |
-| `npm run lint` | Run ESLint |
-| `npm run format` | Format code with Prettier |
+| `npm run preview` | Preview the production build |
+| `npm run lint` | Run lint checks if configured |
+| `npm run format` | Format the code if configured |
+
+The available commands depend on the scripts defined in `package.json`.
 
 ---
 
 ## Roadmap
 
-- [x] Gold and Milk design system, themes, motion, and responsive app shell
-- [x] Domain types, realistic mock data, and future-ready mock services
-- [x] Dashboard and wallet send/receive flows
-- [x] Transaction search, filters, pagination, and detail views
-- [x] Invoice list, creation, detail, and payment-link workflows
-- [x] Analytics, assistant, settings, profile, and help pages
-- [x] Route metadata, 404, loading, empty, and error states
-- [ ] Supabase authentication and data persistence
-- [ ] Stellar SDK wallet connection and live balance queries
-- [ ] Live transaction submission with Stellar network
-- [ ] Soroban smart contract invoice settlement
-- [ ] Real AI assistant integration (e.g. OpenAI, Anthropic)
-- [ ] PDF invoice export
-- [ ] Mobile app (React Native)
+### Application Experience
+
+- [x] Responsive application interface and purple design system.
+- [x] Dashboard, wallet interface, and send/receive workflows.
+- [x] Transaction history and transaction detail views.
+- [x] Invoice management interface.
+- [x] Financial analytics and AI assistant interface.
+- [x] Profile, settings, and theme preferences.
+
+### Privy and Wallet Infrastructure
+
+- [ ] Verify embedded wallet creation and access in the deployed application.
+- [ ] Complete and verify Privy wallet integration beyond authentication.
+- [ ] Integrate and test transaction signing through the configured wallet.
+- [ ] Verify successful transaction submission and status handling on Monad.
+- [ ] Evaluate gas sponsorship where supported and configured.
+
+### Monad and Financial Operations
+
+- [ ] Complete live Monad wallet integration.
+- [ ] Verify live onchain transaction submission.
+- [ ] Implement and test required Solidity smart contracts.
+- [ ] Complete onchain invoice settlement and payment verification.
+- [ ] Integrate supported token swap and conversion providers.
+
+### AI and Data
+
+- [ ] Complete production AI integration.
+- [ ] Connect financial insights to verified transaction and wallet data.
+- [ ] Complete required data persistence and backend integrations.
+- [ ] Add PDF invoice export.
+- [ ] Explore a mobile application.
+
+Roadmap items should be updated as features become operational and verified.
 
 ---
 
 ## Contributing
 
-Contributions are welcome. Follow the steps below to keep things consistent.
+Contributions are welcome.
 
-### 1. Fork and clone
+1. Fork and clone the repository.
+2. Install dependencies.
+3. Create a descriptive feature branch.
 
-```sh
-git clone https://github.com/<your-username>/Stellix_front-end.git
-cd stellix-frontend
-npm install
+```bash
+git checkout -b feat/privy-wallet-integration
 ```
 
-### 2. Create a branch
+4. Keep wallet and blockchain operations behind the appropriate service boundaries.
+5. Follow the existing component and TypeScript conventions.
+6. Preserve the purple design system and support light and dark themes.
+7. Run the available lint and build checks.
+8. Submit a pull request describing the changes and how they were tested.
 
-Pick a descriptive name that reflects what you are working on.
+Example commit:
 
-```sh
-git checkout -b feat/soroban-invoice-settlement
-```
-
-Branch naming:
-- `feat/` - new feature
-- `fix/` - bug fix
-- `chore/` - maintenance, refactoring, or tooling
-- `docs/` - documentation only
-
-### 3. Make your changes
-
-- Keep all external data access behind `src/services/`. Components should never import wallet, cloud, or contract SDKs directly.
-- Follow the existing component structure under `src/components/`.
-- New components must work in both light and dark mode.
-- Stick to Gold and Milk brand colors only.
-- Every icon-only button needs an accessible tooltip.
-- Run `npm run lint` and `npm run build` before opening a pull request.
-
-### 4. Commit your changes
-
-Write clear, imperative commit messages.
-
-```sh
+```bash
 git add .
-git commit -m "feat: add Soroban invoice settlement flow"
+git commit -m "feat: integrate Privy embedded wallet transactions"
+git push origin feat/privy-wallet-integration
 ```
-
-### 5. Open a pull request
-
-Push your branch and open a pull request against `main`. Add a short description of what changed and why.
-
-```sh
-git push origin feat/soroban-invoice-settlement
-```
-
-> **Note:** This project is connected to [Lovable](https://lovable.dev). Do not force-push, rebase, or amend commits that have already been pushed, as it rewrites history on Lovable's side and will break the project sync.
 
 ---
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
-<div align="center">
-Built for the Stellar ecosystem.
-</div>
+**Built on Monad. Powered by Privy. Designed for everyday finance.**

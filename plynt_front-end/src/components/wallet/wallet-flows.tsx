@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowDownLeft, Check, Coins, Copy, Fuel, Loader2, QrCode, Share2, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Check, Coins, Copy, Fuel, Loader2, QrCode, Share2, ShieldCheck, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSendTransaction } from '@privy-io/react-auth';
 import { Button } from '@/components/ui/button';
@@ -14,8 +14,7 @@ import type { WalletAsset } from '@/hooks/use-wallet-data';
 
 // Monad Testnet token contract addresses
 const TOKEN_CONTRACTS: Record<string, string> = {
-  USDC: '0xf817257fed379853cDe0fa4F97AB987181B1E5Ea',
-  WETH: '0xB5a30b0FDc5EA94A52fDC42e3E9760Cb8449Fb37',
+  USDC: '0x534b2f3A21130d7a60830c2Df862319e593943A3', // Circle official
 };
 
 // Simple ERC20 transfer ABI encoding
@@ -107,7 +106,8 @@ export function SendDialog({
   const [memo, setMemo] = useState('');
   const [error, setError] = useState('');
   const [txHash, setTxHash] = useState('');
-  const { sendTransaction, loading } = useSendTransaction();
+  const [sending, setSending] = useState(false);
+  const { sendTransaction } = useSendTransaction();
 
   const fee = 0.00001;
   const MONAD_CHAIN_ID = 10143;
@@ -126,6 +126,7 @@ export function SendDialog({
   };
 
   const confirm = async () => {
+    setSending(true);
     try {
       let hash: string | undefined;
 
@@ -136,8 +137,8 @@ export function SendDialog({
           to: recipient as `0x${string}`,
           value: valueWei,
           chainId: MONAD_CHAIN_ID,
-        }, { header: 'Send MON' });
-        hash = result?.transactionHash;
+        });
+        hash = result?.hash;
       } else {
         // ERC20 transfer
         const contractAddress = TOKEN_CONTRACTS[asset];
@@ -148,8 +149,8 @@ export function SendDialog({
           to: contractAddress as `0x${string}`,
           data: encodeERC20Transfer(recipient, amountWei) as `0x${string}`,
           chainId: MONAD_CHAIN_ID,
-        }, { header: `Send ${asset}` });
-        hash = result?.transactionHash;
+        });
+        hash = result?.hash;
       }
 
       if (hash) setTxHash(hash);
@@ -159,6 +160,8 @@ export function SendDialog({
       const msg = e instanceof Error ? e.message : 'Transaction failed';
       setError(msg);
       toast.error('Transaction failed', { description: msg });
+    } finally {
+      setSending(false);
     }
   };
 
@@ -269,8 +272,8 @@ export function SendDialog({
             {error && <p role="alert" className="text-sm font-medium text-destructive">{error}</p>}
             <DialogFooter>
               <Button variant="outline" onClick={() => setStep('form')}>Back</Button>
-              <Button onClick={confirm} disabled={loading}>
-                {loading ? <><Loader2 className="size-4 animate-spin" /> Sending…</> : 'Confirm & send'}
+              <Button onClick={confirm} disabled={sending}>
+                {sending ? <><Loader2 className="size-4 animate-spin" /> Sending…</> : 'Confirm & send'}
               </Button>
             </DialogFooter>
           </div>
@@ -306,8 +309,8 @@ export function SendDialog({
 export function WalletActionButtons({ onSend, onReceive }: { onSend: () => void; onReceive: () => void }) {
   return (
     <div className="flex gap-2">
-      <Button onClick={onSend}><ArrowDownLeft className="rotate-180" />Send</Button>
-      <Button variant="outline" onClick={onReceive}><ArrowDownLeft />Receive</Button>
+      <Button onClick={onSend}><ArrowUpRight className="size-4" />Send</Button>
+      <Button variant="outline" onClick={onReceive}><ArrowDownLeft className="size-4" />Receive</Button>
     </div>
   );
 }

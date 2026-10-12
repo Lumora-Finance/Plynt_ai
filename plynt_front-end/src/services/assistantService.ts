@@ -119,10 +119,6 @@ function resolveAnswer(question: string, ctx: AssistantContext): string {
     return "Invoices are user-created in Plynt. Head to the Invoices section to create and track payment requests in USDC, MON, or WETH.";
   }
 
-  // ── Automations / recurring ─────────────────────────────────────────────────
-  if (q.includes("recurring payment") || q.includes("automation")) {
-    return "Automations and recurring payments are user-configured in Plynt. Go to the Automations or Recurring Payments section to set up rules.";
-  }
 
   // ── Salary ──────────────────────────────────────────────────────────────────
   if (q.includes("salary")) {
@@ -159,7 +155,7 @@ function resolveAnswer(question: string, ctx: AssistantContext): string {
     return "Your wallet is empty on Monad Testnet. Receive some MON to get started! Try the Monad faucet or ask a teammate to send you some testnet tokens.";
   }
 
-  return `Your portfolio is ${fmt(totalBalance)}. You've made ${txs.length} on-chain transaction${txs.length !== 1 ? "s" : ""} on Monad Testnet. Ask me about your balance, transactions, invoices, or automations!`;
+  return `Your portfolio is ${fmt(totalBalance)}. You've made ${txs.length} on-chain transaction${txs.length !== 1 ? "s" : ""} on Monad Testnet. Ask me about your balance, transactions, invoices, or gifts!`;
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────────

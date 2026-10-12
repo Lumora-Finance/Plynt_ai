@@ -139,55 +139,8 @@ export interface InvoiceDraft {
   items: InvoiceItem[];
 }
 
-// ─── Automations / Money Rules ────────────────────────────────────────────────
-export type AutomationStatus = "active" | "paused" | "completed" | "cancelled";
-export type AutomationFrequency =
-  | "daily"
-  | "weekly"
-  | "biweekly"
-  | "monthly"
-  | "quarterly"
-  | "on_payment";
-export type AutomationType =
-  | "salary_split"
-  | "recurring_transfer"
-  | "auto_savings"
-  | "recurring_payment"
-  | "allowance"
-  | "custom";
-
-export interface AutomationRule {
-  id: string;
-  name: string;
-  type: AutomationType;
-  description: string;
-  /** Amount (absolute) or percentage string like "20%" */
-  amount: number;
-  isPercentage: boolean;
-  asset: AssetSymbol;
-  source: string;
-  destination: string;
-  frequency: AutomationFrequency;
-  startDate: string;
-  endDate?: string;
-  occurrences?: number;
-  executedCount: number;
-  status: AutomationStatus;
-  nextExecution?: string;
-  lastExecution?: string;
-  createdAt: string;
-}
-
-export interface AutomationExecution {
-  id: string;
-  automationId: string;
-  executedAt: string;
-  amount: number;
-  asset: AssetSymbol;
-  status: "success" | "failed" | "skipped";
-  txHash?: string;
-  note?: string;
-}
+// ─── Salary ───────────────────────────────────────────────────────────────────
+export type SalaryFrequency = "weekly" | "biweekly" | "monthly" | "quarterly";
 
 export interface SalarySplitRule {
   id: string;
@@ -197,29 +150,6 @@ export interface SalarySplitRule {
   asset: AssetSymbol;
 }
 
-// ─── Recurring Payments ───────────────────────────────────────────────────────
-export type RecurringPaymentStatus = "active" | "paused" | "completed" | "cancelled";
-
-export interface RecurringPayment {
-  id: string;
-  name: string;
-  recipient: string;
-  recipientAddress: string;
-  asset: AssetSymbol;
-  amount: number;
-  frequency: AutomationFrequency;
-  startDate: string;
-  endDate?: string;
-  totalOccurrences?: number;
-  paidCount: number;
-  nextPayment?: string;
-  lastPayment?: string;
-  status: RecurringPaymentStatus;
-  memo?: string;
-  createdAt: string;
-}
-
-// ─── Salary ───────────────────────────────────────────────────────────────────
 export interface SalaryRecord {
   id: string;
   employer: string;
@@ -236,7 +166,7 @@ export interface SalaryConfig {
   employer: string;
   amount: number;
   asset: AssetSymbol;
-  frequency: AutomationFrequency;
+  frequency: SalaryFrequency;
   nextPayment: string;
   lastPayment?: string;
   distributionRules: SalarySplitRule[];
@@ -246,6 +176,7 @@ export interface SalaryConfig {
 // ─── Programmable Gifts ───────────────────────────────────────────────────────
 export type GiftStatus = "scheduled" | "available" | "claimed" | "expired" | "cancelled";
 export type GiftDirection = "sent" | "received";
+export type GiftFrequency = "weekly" | "biweekly" | "monthly";
 
 export interface Gift {
   id: string;
@@ -262,7 +193,7 @@ export interface Gift {
   /** If true this is a recurring gift */
   isRecurring: boolean;
   recurrenceCount?: number;
-  recurrenceFrequency?: AutomationFrequency;
+  recurrenceFrequency?: GiftFrequency;
   executedCount: number;
   status: GiftStatus;
   claimedAt?: string;
@@ -281,10 +212,7 @@ export interface GiftClaim {
 
 // ─── AI Assistant ─────────────────────────────────────────────────────────────
 export type AssistantActionType =
-  | "create_savings_rule"
-  | "create_recurring_transfer"
   | "create_gift"
-  | "schedule_payment"
   | "create_invoice"
   | "set_salary_distribution";
 
@@ -310,9 +238,6 @@ export interface DashboardOverview {
   expenses: number;
   pendingInvoicesAmount: number;
   portfolioValue: number;
-  activeAutomations: number;
-  nextScheduledPayment?: string;
   nextSalary?: string;
   upcomingGifts: number;
-  savingsProgress: number;
 }

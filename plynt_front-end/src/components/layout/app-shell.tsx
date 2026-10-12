@@ -8,13 +8,12 @@ import {
   LayoutDashboard,
   Menu,
   ReceiptText,
-  Repeat,
   Settings2,
+  ShieldCheck,
   Sparkles,
   TrendingUp,
   Wallet,
   WalletCards,
-  Zap,
   LogOut,
   UserRound,
   Loader2,
@@ -38,9 +37,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
 import { useRequireAuth } from "@/hooks/use-require-auth";
+import { useProfile } from "@/hooks/use-profile";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -51,10 +51,8 @@ const primary = [
   { to: "/wallet",       label: "Wallet",        icon: WalletCards },
   { to: "/transactions", label: "Transactions",  icon: ArrowLeftRight },
   { to: "/invoices",     label: "Invoices",      icon: ReceiptText },
-  { to: "/automations",  label: "Automations",   icon: Zap },
   { to: "/salary",       label: "Salary",        icon: TrendingUp },
   { to: "/gifts",        label: "Gifts",         icon: Gift },
-  { to: "/recurring",    label: "Recurring",     icon: Repeat },
   { to: "/analytics",    label: "Analytics",     icon: ChartNoAxesCombined },
   { to: "/assistant",    label: "AI Assistant",  icon: Sparkles },
 ] as const;
@@ -69,15 +67,14 @@ const titles: Record<string, string> = {
   wallet:       "Wallet",
   transactions: "Transactions",
   invoices:     "Invoices",
-  automations:  "Automations",
   salary:       "Salary",
   gifts:        "Gifts",
-  recurring:    "Recurring Payments",
   analytics:    "Analytics",
   assistant:    "AI Assistant",
   settings:     "Settings",
   profile:      "Profile",
   help:         "Help",
+  admin:        "Admin Panel",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -112,7 +109,7 @@ function Brand() {
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 
-function Navigation({ close }: { close?: () => void }) {
+function Navigation({ close, isAdmin }: { close?: () => void; isAdmin?: boolean }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   return (
     <nav className="flex h-full flex-col overflow-y-auto px-3 pb-4">
@@ -141,6 +138,19 @@ function Navigation({ close }: { close?: () => void }) {
             <span>{item.label}</span>
           </Link>
         ))}
+        {isAdmin && (
+          <Link
+            to="/admin"
+            onClick={close}
+            className={cn(
+              "nav-item mt-1 border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10",
+              path.startsWith("/admin") && "nav-item-active",
+            )}
+          >
+            <ShieldCheck className="size-5 shrink-0" />
+            <span>Admin Panel</span>
+          </Link>
+        )}
       </div>
     </nav>
   );
@@ -156,6 +166,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { ready, user } = useRequireAuth();
   const { logout } = usePrivy();
   const { wallets } = useWallets();
+  const { isAdmin } = useProfile();
 
   // Landing page: render without nav chrome, no auth check needed
   if (path === "/") {
@@ -191,11 +202,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // Mobile nav: 5 most important routes
   const mobileNav = [
-    { to: "/dashboard",   label: "Dashboard", icon: LayoutDashboard },
-    { to: "/wallet",      label: "Wallet",    icon: WalletCards },
-    { to: "/automations", label: "Automate",  icon: Zap },
-    { to: "/gifts",       label: "Gifts",     icon: Gift },
-    { to: "/assistant",   label: "AI",        icon: Sparkles },
+    { to: "/dashboard",    label: "Dashboard", icon: LayoutDashboard },
+    { to: "/wallet",       label: "Wallet",    icon: WalletCards },
+    { to: "/transactions", label: "Txns",      icon: ArrowLeftRight },
+    { to: "/gifts",        label: "Gifts",     icon: Gift },
+    { to: "/assistant",    label: "AI",        icon: Sparkles },
   ] as const;
 
   return (
@@ -277,7 +288,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* ── Desktop sidebar ── */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border bg-sidebar lg:flex">
         <Brand />
-        <Navigation />
+        <Navigation isAdmin={isAdmin} />
       </aside>
 
       <div className="relative z-10 lg:pl-64">
@@ -301,7 +312,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <SheetDescription>Navigate PLYNT</SheetDescription>
                 </SheetHeader>
                 <Brand />
-                <Navigation close={() => setMenuOpen(false)} />
+                <Navigation close={() => setMenuOpen(false)} isAdmin={isAdmin} />
               </SheetContent>
             </Sheet>
             <h2 className="text-base font-semibold md:text-lg">{titles[segment] ?? "PLYNT"}</h2>

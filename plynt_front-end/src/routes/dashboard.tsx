@@ -4,9 +4,7 @@ import {
   Activity,
   ArrowDownLeft,
   ArrowUpRight,
-  CalendarDays,
   ChartNoAxesCombined,
-  Clock3,
   FilePlus2,
   Gift,
   Loader2,
@@ -14,7 +12,6 @@ import {
   TrendingDown,
   TrendingUp,
   Wallet,
-  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageIntro, currency } from '@/components/shared/common';
@@ -154,40 +151,6 @@ function DashboardPage() {
           ))}
         </div>
       </section>
-
-      {/* Automations placeholder */}
-      <Reveal delay={60}>
-        <section className="panel">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="section-title flex items-center gap-2">
-                <Zap className="size-5 text-primary" /> Money automation
-              </h2>
-              <p className="section-subtitle">Set up rules, recurring payments, salary splits and gifts.</p>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => nav({ to: '/automations' })}>Manage rules</Button>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              { label: 'Active automations', value: '—', sub: 'none set up yet', icon: Activity, to: '/automations' },
-              { label: 'Recurring payments', value: '—', sub: 'none scheduled', icon: CalendarDays, to: '/recurring' },
-              { label: 'Salary', value: '—', sub: 'not configured', icon: TrendingUp, to: '/salary' },
-              { label: 'Gifts', value: '—', sub: 'none scheduled', icon: Gift, to: '/gifts' },
-            ].map((item) => (
-              <button key={item.label} onClick={() => nav({ to: item.to as any })} className="quick-action group flex-col items-start gap-2 text-left">
-                <div className="flex w-full items-center justify-between">
-                  <span className="text-xs text-muted-foreground">{item.label}</span>
-                  <item.icon className="size-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xl font-semibold">{item.value}</p>
-                  <p className="text-xs text-muted-foreground">{item.sub}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </section>
-      </Reveal>
 
       {/* AI Insights placeholder */}
       <Reveal delay={70}>

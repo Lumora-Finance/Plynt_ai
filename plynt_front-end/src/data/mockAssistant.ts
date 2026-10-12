@@ -6,5 +6,4 @@ export const suggestedPrompts: string[] = [
   "How much MON do I have?",
   "Summarize my financial activity.",
   "What invoices are unpaid?",
-  "Show my recurring payments.",
 ];

@@ -10,15 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AssistantRouteImport } from './routes/assistant'
-import { Route as AutomationsRouteImport } from './routes/automations'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as GiftsRouteImport } from './routes/gifts'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as InvoicesRouteImport } from './routes/invoices'
 import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as RecurringRouteImport } from './routes/recurring'
 import { Route as SalaryRouteImport } from './routes/salary'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TransactionsRouteImport } from './routes/transactions'
@@ -31,6 +30,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AnalyticsRoute = AnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
@@ -39,11 +43,6 @@ const AnalyticsRoute = AnalyticsRouteImport.update({
 const AssistantRoute = AssistantRouteImport.update({
   id: '/assistant',
   path: '/assistant',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AutomationsRoute = AutomationsRouteImport.update({
-  id: '/automations',
-  path: '/automations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -69,11 +68,6 @@ const InvoicesRoute = InvoicesRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RecurringRoute = RecurringRouteImport.update({
-  id: '/recurring',
-  path: '/recurring',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SalaryRoute = SalaryRouteImport.update({
@@ -109,15 +103,14 @@ const InvoicesNewRoute = InvoicesNewRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/analytics': typeof AnalyticsRoute
   '/assistant': typeof AssistantRoute
-  '/automations': typeof AutomationsRoute
   '/dashboard': typeof DashboardRoute
   '/gifts': typeof GiftsRoute
   '/help': typeof HelpRoute
   '/invoices': typeof InvoicesRouteWithChildren
   '/profile': typeof ProfileRoute
-  '/recurring': typeof RecurringRoute
   '/salary': typeof SalaryRoute
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRoute
@@ -127,15 +120,14 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/analytics': typeof AnalyticsRoute
   '/assistant': typeof AssistantRoute
-  '/automations': typeof AutomationsRoute
   '/dashboard': typeof DashboardRoute
   '/gifts': typeof GiftsRoute
   '/help': typeof HelpRoute
   '/invoices': typeof InvoicesRouteWithChildren
   '/profile': typeof ProfileRoute
-  '/recurring': typeof RecurringRoute
   '/salary': typeof SalaryRoute
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRoute
@@ -146,15 +138,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/analytics': typeof AnalyticsRoute
   '/assistant': typeof AssistantRoute
-  '/automations': typeof AutomationsRoute
   '/dashboard': typeof DashboardRoute
   '/gifts': typeof GiftsRoute
   '/help': typeof HelpRoute
   '/invoices': typeof InvoicesRouteWithChildren
   '/profile': typeof ProfileRoute
-  '/recurring': typeof RecurringRoute
   '/salary': typeof SalaryRoute
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRoute
@@ -166,15 +157,14 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/analytics'
     | '/assistant'
-    | '/automations'
     | '/dashboard'
     | '/gifts'
     | '/help'
     | '/invoices'
     | '/profile'
-    | '/recurring'
     | '/salary'
     | '/settings'
     | '/transactions'
@@ -184,15 +174,14 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/analytics'
     | '/assistant'
-    | '/automations'
     | '/dashboard'
     | '/gifts'
     | '/help'
     | '/invoices'
     | '/profile'
-    | '/recurring'
     | '/salary'
     | '/settings'
     | '/transactions'
@@ -202,15 +191,14 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/analytics'
     | '/assistant'
-    | '/automations'
     | '/dashboard'
     | '/gifts'
     | '/help'
     | '/invoices'
     | '/profile'
-    | '/recurring'
     | '/salary'
     | '/settings'
     | '/transactions'
@@ -221,15 +209,14 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   AnalyticsRoute: typeof AnalyticsRoute
   AssistantRoute: typeof AssistantRoute
-  AutomationsRoute: typeof AutomationsRoute
   DashboardRoute: typeof DashboardRoute
   GiftsRoute: typeof GiftsRoute
   HelpRoute: typeof HelpRoute
   InvoicesRoute: typeof InvoicesRouteWithChildren
   ProfileRoute: typeof ProfileRoute
-  RecurringRoute: typeof RecurringRoute
   SalaryRoute: typeof SalaryRoute
   SettingsRoute: typeof SettingsRoute
   TransactionsRoute: typeof TransactionsRoute
@@ -245,6 +232,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/analytics': {
       id: '/analytics'
       path: '/analytics'
@@ -257,13 +251,6 @@ declare module '@tanstack/react-router' {
       path: '/assistant'
       fullPath: '/assistant'
       preLoaderRoute: typeof AssistantRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/automations': {
-      id: '/automations'
-      path: '/automations'
-      fullPath: '/automations'
-      preLoaderRoute: typeof AutomationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -299,13 +286,6 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/recurring': {
-      id: '/recurring'
-      path: '/recurring'
-      fullPath: '/recurring'
-      preLoaderRoute: typeof RecurringRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/salary': {
@@ -369,15 +349,14 @@ const InvoicesRouteWithChildren = InvoicesRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   AnalyticsRoute: AnalyticsRoute,
   AssistantRoute: AssistantRoute,
-  AutomationsRoute: AutomationsRoute,
   DashboardRoute: DashboardRoute,
   GiftsRoute: GiftsRoute,
   HelpRoute: HelpRoute,
   InvoicesRoute: InvoicesRouteWithChildren,
   ProfileRoute: ProfileRoute,
-  RecurringRoute: RecurringRoute,
   SalaryRoute: SalaryRoute,
   SettingsRoute: SettingsRoute,
   TransactionsRoute: TransactionsRoute,
@@ -386,3 +365,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
