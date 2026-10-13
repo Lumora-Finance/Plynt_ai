@@ -45,32 +45,11 @@ function Corners({ color = "#8A8A93" }: { color?: string }) {
   );
 }
 
-// ─── Google logo ──────────────────────────────────────────────────────────────
-function GoogleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-      <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" />
-      <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" />
-      <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" />
-      <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" />
-    </svg>
-  );
-}
-
 // ─── Main landing / auth gate ─────────────────────────────────────────────────
 
 export function LandingPage() {
   const { ready, authenticated, login } = usePrivy();
   const navigate = useNavigate();
-
-  // Detect if we're on an OAuth callback (Privy returned from Google)
-  const searchStr = typeof window !== "undefined" ? window.location.search : "";
-  const isOAuthCallback =
-    searchStr.includes("privy_oauth_code") ||
-    searchStr.includes("privy_oauth_state") ||
-    searchStr.includes("privy_oauth_provider") ||
-    searchStr.includes("code=") ||
-    searchStr.includes("state=");
 
   // Once authenticated, redirect straight into the app
   useEffect(() => {
@@ -79,22 +58,12 @@ export function LandingPage() {
     }
   }, [ready, authenticated, navigate]);
 
-  // Show a loading spinner while:
-  // - Privy is not yet ready
-  // - We're on an OAuth callback (waiting for Privy to process it)
-  const isLoading = !ready || isOAuthCallback;
-
   const handleEmailLogin = () => {
     login({ loginMethods: ["email"] });
   };
 
-  const handleGoogleLogin = () => {
-    login({ loginMethods: ["google"] });
-  };
-
-  // While processing OAuth callback, show a full-screen spinner
-  // instead of the login buttons (prevents flashing and double-login)
-  if (isLoading) {
+  // Show spinner while Privy is initialising
+  if (!ready) {
     return (
       <div
         className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 text-center"
@@ -105,7 +74,7 @@ export function LandingPage() {
           <img src="/plynt_logoo.png" alt="PLYNT" className="size-12 object-contain" />
           <div className="size-6 animate-spin rounded-full border-2 border-[#836EF9] border-t-transparent" />
           <p className="text-xs" style={{ color: "#727285", fontFamily: "var(--font-mono)" }}>
-            {isOAuthCallback ? "Completing sign in…" : "Loading…"}
+            Loading…
           </p>
         </div>
       </div>
@@ -153,47 +122,15 @@ export function LandingPage() {
           </p>
         </div>
 
-        {/* Auth buttons */}
+        {/* Auth button — email only */}
         <div className="flex w-full flex-col gap-3">
-          {/* Google */}
-          <button
-            onClick={handleGoogleLogin}
-            disabled={!ready}
-            className="btn-monad-primary w-full"
-            aria-label="Continue with Google"
-          >
-            <GoogleIcon />
-            Continue with Google
-          </button>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3">
-            <span className="h-px flex-1" style={{ background: "#26262B" }} />
-            <span className="text-xs" style={{ color: "#565666", fontFamily: "var(--font-mono)" }}>
-              or
-            </span>
-            <span className="h-px flex-1" style={{ background: "#26262B" }} />
-          </div>
-
-          {/* Email */}
           <button
             onClick={handleEmailLogin}
             disabled={!ready}
-            className="flex w-full items-center justify-center gap-2 rounded-none py-3 text-sm font-medium transition-colors"
-            style={{
-              border: "1px solid #26262B",
-              background: "transparent",
-              color: "#FBFAF9",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = "#111114";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-            }}
+            className="btn-monad-primary w-full"
             aria-label="Continue with Email"
           >
-            <Mail className="size-4" style={{ color: "#836EF9" }} />
+            <Mail className="size-4" />
             Continue with Email
           </button>
         </div>

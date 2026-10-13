@@ -26,8 +26,8 @@ export const monadTestnet = defineChain({
 
 // ─── Privy configuration ──────────────────────────────────────────────────────
 export const privyConfig: PrivyClientConfig = {
-  // Sign-in methods: email OTP + Google OAuth only
-  loginMethods: ["email", "google"],
+  // Sign-in methods: email OTP only
+  loginMethods: ["email"],
 
   // Create an embedded Ethereum wallet for every new user automatically.
   // In Privy v3, `createOnLogin` is nested under `embeddedWallets.ethereum`.
