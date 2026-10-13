@@ -220,8 +220,17 @@ function AuthShell({ children }: { children: React.ReactNode }) {
     markAllRead,
   } = useNotifications();
 
-  // While Privy is loading, show a minimal full-screen spinner
-  if (!ready) {
+  // Hard timeout — if Privy hasn't become ready within 12s, stop spinning
+  // and render as unauthenticated (useRequireAuth will redirect to /).
+  const [privyTimedOut, setPrivyTimedOut] = useState(false);
+  useEffect(() => {
+    if (ready) { setPrivyTimedOut(false); return; }
+    const t = setTimeout(() => setPrivyTimedOut(true), 12_000);
+    return () => clearTimeout(t);
+  }, [ready]);
+
+  // While Privy is loading (and hasn't timed out), show a full-screen spinner
+  if (!ready && !privyTimedOut) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="size-8 animate-spin text-primary" />

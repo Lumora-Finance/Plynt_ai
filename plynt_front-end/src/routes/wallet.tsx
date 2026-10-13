@@ -143,7 +143,7 @@ function WalletPage() {
   const [mainnetDialog, setMainnetDialog] = useState(false);
   const [comingSoonType, setComingSoonType] = useState<'swap' | 'convert' | null>(null);
 
-  const { data, loading, error, address, refetch } = useWalletData();
+  const { data, loading, error, address, refetch, walletTimedOut } = useWalletData();
   const { transactions, loading: txLoading } = useTransactions();
 
   useEffect(() => {
@@ -162,10 +162,33 @@ function WalletPage() {
     if (address) { navigator.clipboard?.writeText(address); toast.success('Wallet address copied'); }
   };
 
-  if (loading) {
+  // Show spinner only while actively loading and not timed out
+  if (loading && !walletTimedOut) {
     return (
       <div className="flex min-h-64 items-center justify-center">
         <Loader2 className="size-7 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Wallet timed out — show a friendly retry state
+  if (walletTimedOut && !address) {
+    return (
+      <div className="space-y-8">
+        <PageIntro title="Wallet" description="Your Monad embedded wallet." />
+        <div className="flex min-h-64 flex-col items-center justify-center gap-4 rounded border border-dashed border-border p-8 text-center">
+          <Loader2 className="size-8 text-muted-foreground/40" />
+          <div>
+            <p className="font-medium">Your wallet is being created</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Privy is setting up your embedded wallet. This usually takes a few seconds.<br />
+              If this persists, try refreshing the page.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            <RefreshCw className="size-4" /> Refresh page
+          </Button>
+        </div>
       </div>
     );
   }

@@ -145,7 +145,7 @@ function DashboardPage() {
   });
 
   const { displayName, ready } = usePrivyUser();
-  const { data: wallet, loading: walletLoading } = useWalletData();
+  const { data: wallet, loading: walletLoading, walletTimedOut } = useWalletData();
   const { transactions, loading: txLoading } = useTransactions();
 
   const totalBalance = wallet?.totalBalance ?? 0;
@@ -155,7 +155,8 @@ function DashboardPage() {
   const income = transactions.filter((t) => t.type === 'incoming').reduce((s, t) => s + t.usdValue, 0);
   const expenses = transactions.filter((t) => t.type === 'outgoing' || t.type === 'payment').reduce((s, t) => s + t.usdValue, 0);
 
-  const loading = !ready || walletLoading;
+  // Stop loading if wallet timed out — show the page with empty state
+  const loading = !ready || (walletLoading && !walletTimedOut);
 
   // Persist visibility
   useEffect(() => {
