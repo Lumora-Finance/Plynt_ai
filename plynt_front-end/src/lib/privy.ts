@@ -41,6 +41,15 @@ export const privyConfig: PrivyClientConfig = {
   defaultChain: monadTestnet,
   supportedChains: [monadTestnet],
 
+  // OAuth redirect URL — must match an allowed origin in your Privy dashboard.
+  // Falls back to the current origin so it works on both localhost and prod.
+  oauth: {
+    redirectUrl:
+      typeof window !== "undefined"
+        ? `${window.location.origin}/`
+        : "http://localhost:3000/",
+  },
+
   // Appearance — match Plynt's Gold & Milk design system
   appearance: {
     theme: "dark",

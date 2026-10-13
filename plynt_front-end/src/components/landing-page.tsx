@@ -63,12 +63,26 @@ export function LandingPage() {
   const { ready, authenticated, login } = usePrivy();
   const navigate = useNavigate();
 
+  // Detect if we're on an OAuth callback (Privy returned from Google)
+  const searchStr = typeof window !== "undefined" ? window.location.search : "";
+  const isOAuthCallback =
+    searchStr.includes("privy_oauth_code") ||
+    searchStr.includes("privy_oauth_state") ||
+    searchStr.includes("privy_oauth_provider") ||
+    searchStr.includes("code=") ||
+    searchStr.includes("state=");
+
   // Once authenticated, redirect straight into the app
   useEffect(() => {
     if (ready && authenticated) {
       navigate({ to: "/dashboard" });
     }
   }, [ready, authenticated, navigate]);
+
+  // Show a loading spinner while:
+  // - Privy is not yet ready
+  // - We're on an OAuth callback (waiting for Privy to process it)
+  const isLoading = !ready || isOAuthCallback;
 
   const handleEmailLogin = () => {
     login({ loginMethods: ["email"] });
@@ -77,6 +91,26 @@ export function LandingPage() {
   const handleGoogleLogin = () => {
     login({ loginMethods: ["google"] });
   };
+
+  // While processing OAuth callback, show a full-screen spinner
+  // instead of the login buttons (prevents flashing and double-login)
+  if (isLoading) {
+    return (
+      <div
+        className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 text-center"
+        style={{ background: "#000000" }}
+      >
+        <GridTexture />
+        <div className="relative z-10 flex flex-col items-center gap-4">
+          <img src="/plynt_logoo.png" alt="PLYNT" className="size-12 object-contain" />
+          <div className="size-6 animate-spin rounded-full border-2 border-[#836EF9] border-t-transparent" />
+          <p className="text-xs" style={{ color: "#727285", fontFamily: "var(--font-mono)" }}>
+            {isOAuthCallback ? "Completing sign in…" : "Loading…"}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
