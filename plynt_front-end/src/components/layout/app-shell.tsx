@@ -342,6 +342,12 @@ function AuthShell({ children }: { children: React.ReactNode }) {
         {/* ── Header ── */}
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur-xl md:px-6">
           <div className="flex items-center gap-3">
+            {/* Logo — visible on small screens only (sidebar is hidden) */}
+            <img
+              src="/plynt_logoo.png"
+              alt="PLYNT"
+              className="size-8 object-contain lg:hidden"
+            />
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <Tooltip>
                 <TooltipTrigger asChild>
