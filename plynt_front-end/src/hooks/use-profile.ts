@@ -63,8 +63,8 @@ export function useProfile() {
           privy_did: privyDid,
           wallet_address: address?.toLowerCase() ?? null,
         };
-        if (displayName) upsertPayload.display_name = displayName;
-        if (email) upsertPayload.email = email;
+        if (displayName) upsertPayload['display_name'] = displayName;
+        if (email) upsertPayload['email'] = email;
 
         const { data, error } = await supabase
           .from("profiles")

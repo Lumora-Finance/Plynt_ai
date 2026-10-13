@@ -275,7 +275,7 @@ function Page() {
   }, [transactions, days]);
 
   const income = filteredTxs.filter((t) => t.type === "incoming").reduce((s, t) => s + t.usdValue, 0);
-  const expenses = filteredTxs.filter((t) => t.type === "outgoing" || t.type === "payment").reduce((s, t) => s + t.usdValue, 0);
+  const expenses = filteredTxs.filter((t) => t.type === "outgoing" || t.type === "gift" || t.type === "invoice").reduce((s, t) => s + t.usdValue, 0);
   const totalVolume = filteredTxs.reduce((s, t) => s + t.usdValue, 0);
   const netFlow = income - expenses;
   const avgTx = filteredTxs.length > 0 ? totalVolume / filteredTxs.length : 0;

@@ -64,7 +64,7 @@ function QRCode({ value }: { value: string }) {
     if (!value || !canvasRef.current) return;
     let cancelled = false;
 
-    import('qrcode').then((QR) => {
+    import('qrcode').then((QR: any) => {
       if (cancelled || !canvasRef.current) return;
       QR.toCanvas(canvasRef.current, value, {
         width: 180,
@@ -73,7 +73,7 @@ function QRCode({ value }: { value: string }) {
           dark: '#000000',
           light: '#ffffff',
         },
-      }, (err) => {
+      }, (err: any) => {
         if (!cancelled && !err) setReady(true);
       });
     });
@@ -215,11 +215,13 @@ export function SendDialog({
   onOpenChange,
   initialDraft,
   assets = [],
+  onSuccess,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialDraft?: TransactionDraft;
   assets?: WalletAsset[];
+  onSuccess?: () => void;
 }) {
   const [step, setStep] = useState<'form' | 'review' | 'sending' | 'done' | 'error'>('form');
   const [recipient, setRecipient] = useState(
@@ -317,7 +319,7 @@ export function SendDialog({
           txHash: hash ?? undefined,
           type: 'outgoing',
           counterparty: recipientShort,
-          fromAddress: walletAddress,
+          fromAddress: walletAddress ?? undefined,
           toAddress: recipient,
           asset,
           amount: numAmount,
@@ -333,6 +335,9 @@ export function SendDialog({
           `Sent to ${recipientShort}. Platform fee: ${platformFee.toFixed(6)} ${asset} (${(PLATFORM_FEE_RATE * 100).toFixed(1)}%).`,
           'info',
         );
+
+        // Notify parent to reload transactions + notifications immediately
+        onSuccess?.();
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Transaction failed';

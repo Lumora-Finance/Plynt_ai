@@ -1,5 +1,5 @@
 // src/hooks/use-notifications.ts
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useProfile } from "./use-profile";
 import {
   fetchNotifications,
@@ -10,10 +10,13 @@ import {
 
 export type { NotificationRow };
 
+const POLL_INTERVAL_MS = 15_000; // poll every 15 seconds
+
 export function useNotifications() {
   const { profile } = useProfile();
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
     if (!profile?.id) return;
@@ -26,9 +29,19 @@ export function useNotifications() {
     }
   }, [profile?.id]);
 
+  // Initial load + start polling
   useEffect(() => {
+    if (!profile?.id) return;
+
     load();
-  }, [load]);
+
+    // Poll every 15s to pick up new notifications (e.g. from the trigger)
+    pollRef.current = setInterval(load, POLL_INTERVAL_MS);
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [profile?.id, load]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 

@@ -92,11 +92,19 @@ export function useTransactions() {
   const [transactions, setTransactions] = useState<OnChainTransaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const syncedRef = useRef(false); // only sync once per session
+  const syncedRef = useRef(false); // only sync once per address+profile combo
+  const lastSyncKey = useRef<string>(''); // track address+profileId to detect changes
 
   const embeddedWallet = wallets.find((w) => w.walletClientType === 'privy');
   const address = embeddedWallet?.address;
   const profileId = profile?.id;
+
+  // Reset sync flag when address or profile changes
+  const syncKey = `${address}:${profileId}`;
+  if (syncKey !== lastSyncKey.current && address && profileId) {
+    syncedRef.current = false;
+    lastSyncKey.current = syncKey;
+  }
 
   // ── 1. Load from DB immediately ─────────────────────────────────────────────
   const loadFromDB = useCallback(async () => {
@@ -158,9 +166,9 @@ export function useTransactions() {
         ];
 
         // ── Fetch native MON: scan blocks sequentially in small batches ─────
-        // Use eth_getBlockByNumber but limit to 20 recent blocks (much less than 100)
+        // Use eth_getBlockByNumber but limit to 50 recent blocks
         // and fetch sequentially to avoid rate limits.
-        const NATIVE_SCAN = 20;
+        const NATIVE_SCAN = 50;
         const nativeFrom = Math.max(0, latest - NATIVE_SCAN);
         const nativeTxs: Array<{ hash: string; from: string; to: string; value: string; input: string; blockTimestamp: string }> = [];
 
@@ -296,5 +304,5 @@ export function useTransactions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, profileId, ready, authenticated]);
 
-  return { transactions, loading, error, address };
+  return { transactions, loading, error, address, reload: loadFromDB };
 }

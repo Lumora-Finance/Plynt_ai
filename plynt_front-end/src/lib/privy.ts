@@ -43,12 +43,10 @@ export const privyConfig: PrivyClientConfig = {
 
   // OAuth redirect URL — must match an allowed origin in your Privy dashboard.
   // Falls back to the current origin so it works on both localhost and prod.
-  oauth: {
-    redirectUrl:
-      typeof window !== "undefined"
-        ? `${window.location.origin}/`
-        : "http://localhost:3000/",
-  },
+  // Cast to any because older @privy-io/react-auth versions don't type this yet.
+  ...(typeof window !== "undefined" ? {
+    oauth: { redirectUrl: `${window.location.origin}/` },
+  } : {}) as any,
 
   // Appearance — match Plynt's Gold & Milk design system
   appearance: {

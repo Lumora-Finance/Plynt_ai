@@ -144,7 +144,7 @@ function WalletPage() {
   const [comingSoonType, setComingSoonType] = useState<'swap' | 'convert' | null>(null);
 
   const { data, loading, error, address, refetch, walletTimedOut } = useWalletData();
-  const { transactions, loading: txLoading } = useTransactions();
+  const { transactions, loading: txLoading, reload: reloadTx } = useTransactions();
 
   useEffect(() => {
     try {
@@ -217,7 +217,7 @@ function WalletPage() {
   const monAsset = assets.find((a) => a.symbol === 'MON');
 
   const income = transactions.filter((t) => t.type === 'incoming').reduce((s, t) => s + t.usdValue, 0);
-  const expenses = transactions.filter((t) => t.type === 'outgoing' || t.type === 'payment').reduce((s, t) => s + t.usdValue, 0);
+  const expenses = transactions.filter((t) => t.type === 'outgoing' || t.type === 'gift' || t.type === 'invoice').reduce((s, t) => s + t.usdValue, 0);
 
   const quickActions = [
     { title: 'Send', description: 'Send MON to another wallet.', icon: ArrowUpRight, onClick: () => setSend(true) },
@@ -326,7 +326,7 @@ function WalletPage() {
         {([
           { label: 'MON Balance', value: visible ? totalBalance : 0, prefix: '$', decimals: 2, sub: visible ? `${(monAsset?.balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 4 })} MON` : '••••', icon: Wallet },
           { label: 'Income', value: income, prefix: '$', sub: `${transactions.filter((t) => t.type === 'incoming').length} transactions`, icon: TrendingUp },
-          { label: 'Expenses', value: expenses, prefix: '$', sub: `${transactions.filter((t) => t.type === 'outgoing' || t.type === 'payment').length} transactions`, icon: TrendingDown },
+          { label: 'Expenses', value: expenses, prefix: '$', sub: `${transactions.filter((t) => t.type === 'outgoing' || t.type === 'gift' || t.type === 'invoice').length} transactions`, icon: TrendingDown },
           { label: 'Transactions', value: transactions.length, prefix: '', sub: 'on-chain activity', icon: Activity },
         ] as const).map((stat, i) => (
           <Reveal key={stat.label} delay={80 + i * 45}>
@@ -442,7 +442,7 @@ function WalletPage() {
       </Reveal>
 
       {/* ── Dialogs ── */}
-      <SendDialog open={send} onOpenChange={setSend} assets={assets} />
+      <SendDialog open={send} onOpenChange={setSend} assets={assets} onSuccess={reloadTx} />
       <ReceiveDialog open={receive} onOpenChange={setReceive} />
       <ComingSoonDialog open={mainnetDialog} onClose={() => setMainnetDialog(false)} />
 
