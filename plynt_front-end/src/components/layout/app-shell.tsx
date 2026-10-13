@@ -2,21 +2,26 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   ArrowLeftRight,
   Bell,
+  CheckCheck,
   ChartNoAxesCombined,
+  CircleAlert,
+  CircleCheck,
   CircleHelp,
   Gift,
+  Info,
   LayoutDashboard,
+  Loader2,
+  LogOut,
   Menu,
   ReceiptText,
   Settings2,
   ShieldCheck,
   Sparkles,
   TrendingUp,
+  TriangleAlert,
+  UserRound,
   Wallet,
   WalletCards,
-  LogOut,
-  UserRound,
-  Loader2,
 } from "lucide-react";
 import { useState } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
@@ -29,6 +34,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,8 +47,30 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useProfile } from "@/hooks/use-profile";
+import { useNotifications, type NotificationRow } from "@/hooks/use-notifications";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+// ─── Notification helpers ─────────────────────────────────────────────────────
+
+function notifIcon(type: NotificationRow["type"]) {
+  switch (type) {
+    case "success": return <CircleCheck className="size-4 text-emerald-500" />;
+    case "warning": return <TriangleAlert className="size-4 text-amber-500" />;
+    case "error":   return <CircleAlert className="size-4 text-destructive" />;
+    default:        return <Info className="size-4 text-primary" />;
+  }
+}
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
@@ -157,21 +185,37 @@ function Navigation({ close, isAdmin }: { close?: () => void; isAdmin?: boolean 
 }
 
 // ─── AppShell ─────────────────────────────────────────────────────────────────
+// Outer shell: safe to render without PrivyProvider (landing page / SSR pass)
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
+
+  // Landing page gets no chrome and needs no Privy context
+  if (path === "/") return <>{children}</>;
+
+  // All authenticated routes get the full shell (requires PrivyProvider)
+  return <AuthShell>{children}</AuthShell>;
+}
+
+// ─── AuthShell — only mounted inside PrivyProvider ────────────────────────────
+
+function AuthShell({ children }: { children: React.ReactNode }) {
+  const path = useRouterState({ select: (s) => s.location.pathname });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   const { ready, user } = useRequireAuth();
   const { logout } = usePrivy();
   const { wallets } = useWallets();
   const { isAdmin } = useProfile();
-
-  // Landing page: render without nav chrome, no auth check needed
-  if (path === "/") {
-    return <>{children}</>;
-  }
+  const {
+    notifications,
+    loading: notifLoading,
+    unreadCount,
+    markRead,
+    markAllRead,
+  } = useNotifications();
 
   // While Privy is loading, show a minimal full-screen spinner
   if (!ready) {
@@ -319,25 +363,91 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Notifications"
-                  className="relative min-h-11 min-w-11"
-                  onClick={() =>
-                    toast("You're all caught up", {
-                      description: "No new wallet or invoice activity.",
-                    })
-                  }
-                >
-                  <Bell />
-                  <span className="absolute right-2.5 top-2.5 size-1.5 rounded-full bg-primary" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Notifications</TooltipContent>
-            </Tooltip>
+            {/* Notifications */}
+            <Sheet open={notifOpen} onOpenChange={setNotifOpen}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SheetTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Notifications"
+                      className="relative min-h-11 min-w-11"
+                    >
+                      <Bell />
+                      {unreadCount > 0 && (
+                        <span className="absolute right-2 top-2 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
+                    </Button>
+                  </SheetTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Notifications</TooltipContent>
+              </Tooltip>
+              <SheetContent side="right" className="flex w-80 flex-col gap-0 p-0 sm:w-96">
+                <SheetHeader className="flex flex-row items-center justify-between border-b border-border px-4 py-4">
+                  <div>
+                    <SheetTitle>Notifications</SheetTitle>
+                    <SheetDescription className="mt-0.5 text-xs">
+                      {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
+                    </SheetDescription>
+                  </div>
+                  {unreadCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                      onClick={markAllRead}
+                    >
+                      <CheckCheck className="size-3.5" />
+                      Mark all read
+                    </Button>
+                  )}
+                </SheetHeader>
+                <ScrollArea className="flex-1">
+                  {notifLoading ? (
+                    <div className="flex min-h-32 items-center justify-center">
+                      <Loader2 className="size-5 animate-spin text-primary" />
+                    </div>
+                  ) : notifications.length === 0 ? (
+                    <div className="flex min-h-40 flex-col items-center justify-center gap-2 px-4 text-center">
+                      <Bell className="size-8 text-muted-foreground/40" />
+                      <p className="text-sm text-muted-foreground">No notifications yet.</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {notifications.map((n) => (
+                        <button
+                          key={n.id}
+                          onClick={() => { if (!n.read) markRead(n.id); }}
+                          className={cn(
+                            "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50",
+                            !n.read && "bg-primary/5",
+                          )}
+                        >
+                          <span className="mt-0.5 shrink-0">{notifIcon(n.type)}</span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className={cn("text-sm leading-snug", !n.read && "font-semibold")}>
+                                {n.title}
+                              </p>
+                              {!n.read && (
+                                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
+                              )}
+                            </div>
+                            {n.body && (
+                              <p className="mt-0.5 text-xs text-muted-foreground leading-snug">{n.body}</p>
+                            )}
+                            <p className="mt-1 text-[10px] text-muted-foreground/70">{timeAgo(n.created_at)}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </SheetContent>
+            </Sheet>
 
             <ThemeToggle />
 

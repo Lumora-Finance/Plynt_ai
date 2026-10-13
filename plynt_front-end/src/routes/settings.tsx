@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { PageIntro, shorten } from "@/components/shared/common";
 import { useTheme, type Theme } from "@/components/layout/theme-provider";
 import { usePrivyUser } from "@/hooks/use-privy-user";
+import { useProfile } from "@/hooks/use-profile";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -36,7 +38,32 @@ function SettingRow({ label }: { label: string }) {
 
 function Page() {
   const { theme, setTheme } = useTheme();
-  const { displayName, email, walletAddress } = usePrivyUser();
+  const { displayName: defaultName, email, walletAddress } = usePrivyUser();
+  const { profile } = useProfile();
+
+  // Controlled input — start with whatever the profile has or the Privy display name
+  const [name, setName] = useState(profile?.display_name ?? defaultName);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!profile?.id || !supabase) {
+      toast.error("Could not save — profile not loaded yet.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ display_name: name.trim() || null })
+        .eq("id", profile.id);
+      if (error) throw error;
+      toast.success("Profile saved");
+    } catch (e) {
+      toast.error("Save failed", { description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-7">
@@ -63,14 +90,28 @@ function Page() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="name">Display name</Label>
-              <Input id="name" defaultValue={displayName} className="mt-1.5" />
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="mt-1.5"
+                placeholder="Your display name"
+              />
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" defaultValue={email ?? ""} readOnly className="mt-1.5 cursor-default opacity-70" />
+              <Input
+                id="email"
+                defaultValue={email ?? ""}
+                readOnly
+                className="mt-1.5 cursor-default opacity-70"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">Email is managed by your sign-in provider.</p>
             </div>
           </div>
-          <Button onClick={() => toast.success("Profile saved")}>Save changes</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving…" : "Save changes"}
+          </Button>
         </TabsContent>
 
         <TabsContent value="wallet" className="panel mt-4">
@@ -81,6 +122,7 @@ function Page() {
               <strong>{walletAddress ? shorten(walletAddress) : "No wallet"}</strong>
             </div>
             <div><span>Network</span><strong>Monad Testnet</strong></div>
+            <div><span>Chain ID</span><strong className="font-mono">10143</strong></div>
             <div><span>Type</span><strong>Privy Embedded</strong></div>
             <div><span>Status</span><strong className="text-primary">Connected</strong></div>
           </div>

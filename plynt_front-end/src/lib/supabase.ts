@@ -31,6 +31,11 @@ export type Database = {
         Insert: { id?: string; profile_id: string; employer: string; amount: number; asset?: "MON" | "USDC" | "WETH"; payment_date: string; period: string; status?: string; tx_hash?: string | null };
         Update: Partial<Database["public"]["Tables"]["salary_records"]["Insert"]>;
       };
+      notifications: {
+        Row: { id: string; profile_id: string; title: string; body: string; type: "info" | "success" | "warning" | "error"; read: boolean; created_at: string };
+        Insert: { id?: string; profile_id: string; title: string; body?: string; type?: "info" | "success" | "warning" | "error"; read?: boolean; created_at?: string };
+        Update: { id?: string; profile_id?: string; title?: string; body?: string; type?: "info" | "success" | "warning" | "error"; read?: boolean; created_at?: string };
+      };
     };
     Enums: {
       user_role: "user" | "admin";
@@ -48,6 +53,7 @@ export type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 export type GiftRow = Database["public"]["Tables"]["gifts"]["Row"];
 export type SalaryConfigRow = Database["public"]["Tables"]["salary_config"]["Row"];
 export type SalaryRecordRow = Database["public"]["Tables"]["salary_records"]["Row"];
+export type NotificationRow = Database["public"]["Tables"]["notifications"]["Row"];
 export type UserRole = Database["public"]["Enums"]["user_role"];
 
 // ─── Client ───────────────────────────────────────────────────────────────────

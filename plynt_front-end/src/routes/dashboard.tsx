@@ -3,17 +3,23 @@ import { useEffect, useState } from 'react';
 import {
   Activity,
   ArrowDownLeft,
+  ArrowLeftRight,
   ArrowUpRight,
   ChartNoAxesCombined,
+  Clock,
+  DollarSign,
   Eye,
   EyeOff,
   FilePlus2,
-  Globe,
   Loader2,
+  RadioTower,
+  Repeat2,
+  Rocket,
   Sparkles,
   TrendingDown,
   TrendingUp,
   Wallet,
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageIntro, currency, IconButton } from '@/components/shared/common';
@@ -41,6 +47,7 @@ export const Route = createFileRoute('/dashboard')({
 
 const VISIBILITY_KEY = 'plynt:wallet:visible';
 
+// ─── Network switcher pill ────────────────────────────────────────────────────
 function NetworkSwitch({ onMainnet }: { onMainnet: () => void }) {
   return (
     <div className="inline-flex items-center overflow-hidden rounded-full border border-primary-foreground/20 bg-primary-foreground/5 p-0.5 text-xs font-medium">
@@ -52,27 +59,71 @@ function NetworkSwitch({ onMainnet }: { onMainnet: () => void }) {
         className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-primary-foreground/60 transition-colors hover:text-primary-foreground"
         onClick={onMainnet}
       >
-        <Globe className="size-3" />
+        <Rocket className="size-3" />
         Mainnet
       </button>
     </div>
   );
 }
 
+// ─── Network banner — sits above balance card ─────────────────────────────────
+function NetworkBanner({ onMainnetClick }: { onMainnetClick: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+      <div className="flex items-center gap-3">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+          <RadioTower className="size-4 text-primary" />
+        </span>
+        <p className="text-sm font-medium">Monad Testnet</p>
+      </div>
+      <button
+        onClick={onMainnetClick}
+        className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+      >
+        <Rocket className="size-3" />
+        Mainnet soon
+      </button>
+    </div>
+  );
+}
+
+// ─── Mainnet coming soon dialog ───────────────────────────────────────────────
 function ComingSoonDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-sm text-center">
+      <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-2xl">🔜 Mainnet Coming Soon</DialogTitle>
-          <DialogDescription className="mt-2 text-base leading-relaxed">
-            Plynt is currently live on <strong>Monad Testnet</strong>.<br /><br />
-            Mainnet support is on the roadmap — stay tuned!
+          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">
+            <Rocket className="size-7 text-primary" />
+          </div>
+          <DialogTitle className="text-center text-xl">Mainnet Coming Soon</DialogTitle>
+          <DialogDescription className="text-center text-sm leading-relaxed">
+            Plynt is currently live on <strong>Monad Testnet</strong>. Mainnet support is on
+            the roadmap — stay tuned!
           </DialogDescription>
         </DialogHeader>
-        <div className="mt-2 flex flex-col items-center gap-3">
-          <div className="w-full rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary">
-            🟣 Currently on Monad Testnet · Chain ID 10143
+        <div className="mt-2 space-y-3">
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3">
+            <RadioTower className="size-4 shrink-0 text-primary" />
+            <div>
+              <p className="text-sm font-medium">Monad Testnet</p>
+              <p className="font-mono text-xs text-muted-foreground">Chain ID 10143</p>
+            </div>
+            <span className="ml-auto flex items-center gap-1.5 text-xs text-emerald-600">
+              <span className="size-1.5 rounded-full bg-emerald-400" />
+              Active
+            </span>
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-4 py-3 opacity-50">
+            <Zap className="size-4 shrink-0 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">Monad Mainnet</p>
+              <p className="text-xs text-muted-foreground">Coming soon</p>
+            </div>
+            <span className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="size-3" />
+              Soon
+            </span>
           </div>
           <Button onClick={onClose} className="w-full">Got it</Button>
         </div>
@@ -86,6 +137,7 @@ function DashboardPage() {
   const [send, setSend] = useState(false);
   const [receive, setReceive] = useState(false);
   const [mainnetDialog, setMainnetDialog] = useState(false);
+  const [comingSoonType, setComingSoonType] = useState<'swap' | 'convert' | null>(null);
 
   // Shared visibility toggle — synced with wallet page via localStorage
   const [visible, setVisible] = useState(() => {
@@ -126,7 +178,9 @@ function DashboardPage() {
   const actions = [
     { title: 'Send', description: 'Send MON to another wallet.', icon: ArrowUpRight, onClick: () => setSend(true) },
     { title: 'Receive', description: 'Receive MON into your wallet.', icon: ArrowDownLeft, onClick: () => setReceive(true) },
-    { title: 'Create invoice', description: 'Request payment from a client.', icon: FilePlus2, onClick: () => nav({ to: '/invoices/new' }) },
+    { title: 'Swap', description: 'Swap MON for another token.', icon: Repeat2, onClick: () => setComingSoonType('swap') },
+    { title: 'Convert', description: 'Convert to your local currency.', icon: DollarSign, onClick: () => setComingSoonType('convert') },
+    { title: 'Create invoice', description: 'Request payment from a client.', icon: FilePlus2, onClick: () => nav({ to: '/invoices' }) },
     { title: 'Analytics', description: 'Understand your financial activity.', icon: ChartNoAxesCombined, onClick: () => nav({ to: '/analytics' }) },
   ];
 
@@ -145,6 +199,11 @@ function DashboardPage() {
           title={`${greeting}, ${firstName}`}
           description="Here's your live Monad wallet activity."
         />
+      </Reveal>
+
+      {/* Network banner — above balance card */}
+      <Reveal delay={40}>
+        <NetworkBanner onMainnetClick={() => setMainnetDialog(true)} />
       </Reveal>
 
       {/* Hero wallet */}
@@ -171,12 +230,24 @@ function DashboardPage() {
               · Monad Testnet
             </p>
           </div>
-          <div className="flex flex-col items-end gap-3">
+          <div className="flex flex-col items-start gap-3 sm:items-end">
             <NetworkSwitch onMainnet={() => setMainnetDialog(true)} />
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setSend(true)}><ArrowUpRight />Send</Button>
-              <Button className="border border-primary-foreground/20 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" onClick={() => setReceive(true)}>
-                <ArrowDownLeft />Receive
+            <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:flex sm:flex-wrap sm:justify-end">
+              {/* Send — dark */}
+              <Button variant="secondary" className="justify-center" onClick={() => setSend(true)}>
+                <ArrowUpRight className="size-4" />Send
+              </Button>
+              {/* Receive — purple */}
+              <Button className="justify-center" onClick={() => setReceive(true)}>
+                <ArrowDownLeft className="size-4" />Receive
+              </Button>
+              {/* Swap — purple */}
+              <Button className="justify-center" onClick={() => setComingSoonType('swap')}>
+                <Repeat2 className="size-4" />Swap
+              </Button>
+              {/* Convert — dark */}
+              <Button variant="secondary" className="justify-center" onClick={() => setComingSoonType('convert')}>
+                <DollarSign className="size-4" />Convert
               </Button>
             </div>
           </div>
@@ -325,6 +396,37 @@ function DashboardPage() {
       <SendDialog open={send} onOpenChange={setSend} assets={assets} />
       <ReceiveDialog open={receive} onOpenChange={setReceive} />
       <ComingSoonDialog open={mainnetDialog} onClose={() => setMainnetDialog(false)} />
+      {/* Swap / Convert coming soon */}
+      <Dialog open={!!comingSoonType} onOpenChange={(o) => !o && setComingSoonType(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">
+              {comingSoonType === 'swap' ? <Repeat2 className="size-7 text-primary" /> : <DollarSign className="size-7 text-primary" />}
+            </div>
+            <DialogTitle className="text-center text-xl">
+              {comingSoonType === 'swap' ? 'Swap' : 'Convert'} — Coming on Mainnet
+            </DialogTitle>
+            <DialogDescription className="text-center text-sm leading-relaxed">
+              {comingSoonType === 'swap'
+                ? 'Swap MON for other tokens directly from your Plynt wallet. This feature launches with Monad Mainnet.'
+                : 'Convert your MON balance to your local currency. This feature launches with Monad Mainnet.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-1 space-y-3">
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3 opacity-50">
+              {comingSoonType === 'swap' ? <Repeat2 className="size-4 text-muted-foreground" /> : <DollarSign className="size-4 text-muted-foreground" />}
+              <div>
+                <p className="text-sm font-medium">{comingSoonType === 'swap' ? 'Token Swap' : 'Currency Convert'}</p>
+                <p className="text-xs text-muted-foreground">Available on Mainnet</p>
+              </div>
+              <span className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Clock className="size-3" /> Soon
+              </span>
+            </div>
+            <Button className="w-full" onClick={() => setComingSoonType(null)}>Got it</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

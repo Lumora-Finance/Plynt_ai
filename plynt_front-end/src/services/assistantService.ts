@@ -79,16 +79,10 @@ function resolveAnswer(question: string, ctx: AssistantContext): AIResponse {
   }
 
   if (q.includes("how much usdc")) {
-    const usdc = assets.find((a) => a.symbol === "USDC");
-    if (!usdc || usdc.balance === 0)
-      return respond("💵 You don't have any USDC in your wallet yet. You can receive USDC from another wallet or swap from MON.", "portfolio");
-    return respond(
-      `💵 You're holding **${usdc.balance.toLocaleString()} USDC** (≈${fmt(usdc.usdValue)}), which makes up **${usdc.allocation}%** of your portfolio.`,
-      "portfolio",
-    );
+    return respond("💱 USDC isn't tracked in your Plynt wallet — your balance is in **MON**, the native Monad token. Ask me \"how much MON do I have\" instead!", "portfolio");
   }
 
-  if (q.includes("how much mon")) {
+  if (q.includes("how much mon") || q.includes("mon balance") || q.includes("mon do i have")) {
     const mon = assets.find((a) => a.symbol === "MON");
     if (!mon || mon.balance === 0)
       return respond("🟣 No MON yet! Grab some from [faucet.monad.xyz](https://faucet.monad.xyz) — it's free on testnet.", "portfolio");

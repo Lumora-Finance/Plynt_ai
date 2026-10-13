@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CalendarDays,
   CheckCircle2,
@@ -7,6 +7,7 @@ import {
   Clock,
   Gift,
   Inbox,
+  Loader2,
   Plus,
   RefreshCw,
   Send,
@@ -36,11 +37,20 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PageIntro, EmptyState, currency } from "@/components/shared/common";
+import { MonLogo } from "@/components/shared/mon-logo";
 import { Reveal } from "@/components/shared/motion";
+import { giftService } from "@/services/giftService";
+import { useProfile } from "@/hooks/use-profile";
 import type { Gift as GiftType } from "@/types";
 
 export const Route = createFileRoute("/gifts")({
@@ -53,24 +63,37 @@ export const Route = createFileRoute("/gifts")({
   component: GiftsPage,
 });
 
+// ─── Status badge ─────────────────────────────────────────────────────────────
 const statusConfig: Record<string, { label: string; classes: string }> = {
-  scheduled: { label: "Scheduled", classes: "bg-blue-50 text-blue-700 border-blue-200" },
-  available: { label: "Available", classes: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  scheduled: { label: "Scheduled", classes: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800" },
+  available: { label: "Available 🎁", classes: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800" },
   claimed: { label: "Claimed", classes: "bg-secondary text-primary border-border" },
   expired: { label: "Expired", classes: "bg-muted text-muted-foreground border-border" },
   cancelled: { label: "Cancelled", classes: "bg-destructive/10 text-destructive border-destructive/20" },
 };
 
 function GiftStatusBadge({ status }: { status: string }) {
-  const cfg = statusConfig[status] ?? statusConfig.scheduled!;
+  const cfg = statusConfig[status] ?? statusConfig["scheduled"]!;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-600 ${cfg.classes}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${cfg.classes}`}>
       <span className="size-1.5 rounded-full bg-current" />
       {cfg.label}
     </span>
   );
 }
 
+// ─── Compute what status a gift should have right now ─────────────────────────
+function resolveGiftStatus(gift: GiftType): GiftType["status"] {
+  if (gift.status === "claimed" || gift.status === "cancelled") return gift.status;
+  const now = Date.now();
+  const unlock = new Date(gift.unlockDate).getTime();
+  const expiry = gift.expirationDate ? new Date(gift.expirationDate).getTime() : null;
+  if (expiry && now > expiry) return "expired";
+  if (now >= unlock) return "available";
+  return "scheduled";
+}
+
+// ─── Gift card ────────────────────────────────────────────────────────────────
 function GiftCard({
   gift,
   onCancel,
@@ -80,8 +103,14 @@ function GiftCard({
   onCancel: (id: string) => void;
   onClaim: (id: string) => void;
 }) {
-  const canCancel = ["scheduled", "available"].includes(gift.status) && gift.direction === "sent";
-  const canClaim = gift.status === "available" && gift.direction === "received";
+  const liveStatus = resolveGiftStatus(gift);
+  const canCancel = ["scheduled", "available"].includes(liveStatus) && gift.direction === "sent";
+  const canClaim = liveStatus === "available" && gift.direction === "received";
+
+  const unlockDate = new Date(gift.unlockDate);
+  const isUnlocked = Date.now() >= unlockDate.getTime();
+  const timeUntilUnlock = unlockDate.getTime() - Date.now();
+  const daysUntil = Math.ceil(timeUntilUnlock / 86400000);
 
   return (
     <div className="panel">
@@ -97,16 +126,27 @@ function GiftCard({
             {gift.message && (
               <p className="mt-1 max-w-md text-sm italic text-muted-foreground">"{gift.message}"</p>
             )}
+            {!isUnlocked && liveStatus === "scheduled" && (
+              <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                🔒 Unlocks in {daysUntil} day{daysUntil !== 1 ? "s" : ""} · {unlockDate.toLocaleDateString()}
+              </p>
+            )}
+            {isUnlocked && liveStatus === "available" && (
+              <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
+                🟢 Unlocked · Ready to claim
+              </p>
+            )}
           </div>
         </div>
-        <GiftStatusBadge status={gift.status} />
+        <GiftStatusBadge status={liveStatus} />
       </div>
 
       <div className="mt-4 grid gap-3 text-sm sm:grid-cols-4">
         <div>
           <p className="text-xs text-muted-foreground">Amount</p>
-          <p className="mt-1 font-mono font-semibold text-primary">
-            {currency(gift.amount)} {gift.asset}
+          <p className="mt-1 flex items-center gap-1.5 font-mono font-semibold text-primary">
+            <MonLogo size="xs" showText={false} />
+            {currency(gift.amount)} MON
           </p>
         </div>
         <div>
@@ -148,7 +188,12 @@ function GiftCard({
             </Button>
           )}
           {canCancel && (
-            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => onCancel(gift.id)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => onCancel(gift.id)}
+            >
               <CircleOff className="size-4" />
               Cancel
             </Button>
@@ -159,11 +204,12 @@ function GiftCard({
   );
 }
 
+// ─── Create Gift form ─────────────────────────────────────────────────────────
 type CreateGiftForm = {
   recipient: string;
   recipientAddress: string;
   amount: string;
-  asset: "USDC" | "MON" | "WETH";
+  asset: "MON";
   message: string;
   unlockDate: string;
   expirationDate: string;
@@ -176,7 +222,7 @@ const defaultForm: CreateGiftForm = {
   recipient: "",
   recipientAddress: "",
   amount: "",
-  asset: "USDC",
+  asset: "MON",
   message: "",
   unlockDate: new Date().toISOString().split("T")[0]!,
   expirationDate: "",
@@ -185,7 +231,21 @@ const defaultForm: CreateGiftForm = {
   recurrenceFrequency: "weekly",
 };
 
-function CreateGiftDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenChange: (o: boolean) => void; onCreated: (g: GiftType) => void }) {
+function CreateGiftDialog({
+  open,
+  onOpenChange,
+  onCreated,
+  profileId,
+  displayName,
+  walletAddress,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onCreated: (g: GiftType) => void;
+  profileId?: string | undefined;
+  displayName?: string | undefined;
+  walletAddress?: string | undefined;
+}) {
   const [form, setForm] = useState<CreateGiftForm>(defaultForm);
   const [step, setStep] = useState<"form" | "confirm">("form");
   const [loading, setLoading] = useState(false);
@@ -193,97 +253,169 @@ function CreateGiftDialog({ open, onOpenChange, onCreated }: { open: boolean; on
   const set = <K extends keyof CreateGiftForm>(k: K, v: CreateGiftForm[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  const handleConfirm = async () => {
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    const newGift: GiftType = {
-      id: `gift-${Date.now()}`,
-      direction: "sent",
-      recipient: form.recipient,
-      recipientAddress: form.recipientAddress || undefined,
-      sender: "Clement",
-      senderAddress: "GDKQ4AVP7DNTJOFMBWLU5P3K4XQZW7TMMFXGQDGVXHLVLQOQX2JCFLOW",
-      amount: Number(form.amount),
-      asset: form.asset,
-      message: form.message || undefined,
-      unlockDate: form.unlockDate,
-      expirationDate: form.expirationDate || undefined,
-      isRecurring: form.isRecurring,
-      recurrenceCount: form.isRecurring ? Number(form.recurrenceCount) : undefined,
-      recurrenceFrequency: form.isRecurring ? form.recurrenceFrequency : undefined,
-      executedCount: 0,
-      status: "scheduled",
-      createdAt: new Date().toISOString(),
-    };
-    setLoading(false);
-    onCreated(newGift);
-    onOpenChange(false);
+  const reset = () => {
     setForm(defaultForm);
     setStep("form");
-    toast.success("Gift created", { description: `${currency(newGift.amount)} ${newGift.asset} scheduled for ${newGift.recipient}. [SIMULATED]` });
+  };
+
+  const handleConfirm = async () => {
+    if (!profileId) {
+      toast.error("Sign in required", { description: "You need to be signed in to create gifts." });
+      return;
+    }
+    setLoading(true);
+
+    // Determine initial status based on unlock date
+    const unlockTs = new Date(form.unlockDate).getTime();
+    const initialStatus: GiftType["status"] = Date.now() >= unlockTs ? "available" : "scheduled";
+
+    const newGift = {
+      id: crypto.randomUUID(),
+      direction: "sent" as const,
+      recipient: form.recipient,
+      ...(form.recipientAddress ? { recipientAddress: form.recipientAddress } : {}),
+      sender: displayName ?? "You",
+      ...(walletAddress ? { senderAddress: walletAddress } : {}),
+      amount: Number(form.amount),
+      asset: form.asset,
+      ...(form.message ? { message: form.message } : {}),
+      unlockDate: form.unlockDate,
+      ...(form.expirationDate ? { expirationDate: form.expirationDate } : {}),
+      isRecurring: form.isRecurring,
+      ...(form.isRecurring && form.recurrenceCount
+        ? { recurrenceCount: Number(form.recurrenceCount) }
+        : {}),
+      ...(form.isRecurring ? { recurrenceFrequency: form.recurrenceFrequency } : {}),
+      executedCount: 0,
+      status: initialStatus,
+      createdAt: new Date().toISOString(),
+    } satisfies GiftType;
+
+    try {
+      const created = await giftService.createGift(newGift, profileId);
+      onCreated(created);
+      onOpenChange(false);
+      reset();
+      toast.success("Gift sent! 🎁", {
+        description: `${currency(created.amount)} ${created.asset} for ${created.recipient} — ${
+          initialStatus === "available" ? "available to claim now" : `unlocks ${new Date(form.unlockDate).toLocaleDateString()}`
+        }`,
+      });
+    } catch (e) {
+      toast.error("Failed to create gift", {
+        description: e instanceof Error ? e.message : "Unknown error",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{step === "form" ? "Send a programmable gift" : "Confirm gift"}</DialogTitle>
+          <DialogTitle>
+            {step === "form" ? "Send a programmable gift" : "Confirm gift"}
+          </DialogTitle>
           <DialogDescription>
-            {step === "form" ? "Set the amount, recipient, and unlock conditions." : "Review your gift details before sending."}
+            {step === "form"
+              ? "Set the amount, recipient, and unlock conditions."
+              : "Review your gift details before sending."}
           </DialogDescription>
         </DialogHeader>
 
         {step === "form" ? (
           <div className="space-y-4 py-2">
             <div className="grid gap-2">
-              <Label>Recipient name</Label>
-              <Input placeholder="e.g. Mom, Alex, Team" value={form.recipient} onChange={(e) => set("recipient", e.target.value)} />
+              <Label>Recipient name *</Label>
+              <Input
+                placeholder="e.g. Mom, Alex, Team"
+                value={form.recipient}
+                onChange={(e) => set("recipient", e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
-              <Label>Recipient address (optional)</Label>
-              <Input placeholder="Monad wallet address (0x…)" value={form.recipientAddress} onChange={(e) => set("recipientAddress", e.target.value)} />
+              <Label>Recipient wallet address (optional)</Label>
+              <Input
+                placeholder="Monad wallet address (0x…)"
+                value={form.recipientAddress}
+                onChange={(e) => set("recipientAddress", e.target.value)}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
-                <Label>Amount</Label>
-                <Input type="number" placeholder="e.g. 100" value={form.amount} onChange={(e) => set("amount", e.target.value)} />
+                <Label>Amount *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="e.g. 100"
+                  value={form.amount}
+                  onChange={(e) => set("amount", e.target.value)}
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Asset</Label>
-                <Select value={form.asset} onValueChange={(v) => set("asset", v as CreateGiftForm["asset"])}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USDC">USDC</SelectItem>
-                    <SelectItem value="MON">MON</SelectItem>
-                    <SelectItem value="WETH">WETH</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex h-10 items-center gap-2 rounded-md border border-border bg-muted/40 px-3">
+                  <MonLogo size="sm" />
+                  <span className="text-sm font-medium">MON</span>
+                </div>
               </div>
             </div>
             <div className="grid gap-2">
               <Label>Message (optional)</Label>
-              <Textarea placeholder="Add a personal note…" value={form.message} onChange={(e) => set("message", e.target.value)} className="resize-none" rows={2} />
+              <Textarea
+                placeholder="Add a personal note…"
+                value={form.message}
+                onChange={(e) => set("message", e.target.value)}
+                className="resize-none"
+                rows={2}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
-                <Label>Unlock date</Label>
-                <Input type="date" value={form.unlockDate} onChange={(e) => set("unlockDate", e.target.value)} />
+                <Label>Unlock date *</Label>
+                <Input
+                  type="date"
+                  value={form.unlockDate}
+                  onChange={(e) => set("unlockDate", e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {new Date(form.unlockDate).getTime() <= Date.now()
+                    ? "⚡ Available immediately"
+                    : `🔒 Locks until ${new Date(form.unlockDate).toLocaleDateString()}`}
+                </p>
               </div>
               <div className="grid gap-2">
                 <Label>Expiration (optional)</Label>
-                <Input type="date" value={form.expirationDate} onChange={(e) => set("expirationDate", e.target.value)} />
+                <Input
+                  type="date"
+                  value={form.expirationDate}
+                  onChange={(e) => set("expirationDate", e.target.value)}
+                />
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Switch checked={form.isRecurring} onCheckedChange={(v) => set("isRecurring", v)} id="recurring-gift" />
+              <Switch
+                checked={form.isRecurring}
+                onCheckedChange={(v) => set("isRecurring", v)}
+                id="recurring-gift"
+              />
               <Label htmlFor="recurring-gift">Recurring gift</Label>
             </div>
             {form.isRecurring && (
-              <div className="grid grid-cols-2 gap-3 pl-4 border-l-2 border-primary/30">
+              <div className="grid grid-cols-2 gap-3 border-l-2 border-primary/30 pl-4">
                 <div className="grid gap-2">
                   <Label>Frequency</Label>
-                  <Select value={form.recurrenceFrequency} onValueChange={(v) => set("recurrenceFrequency", v as CreateGiftForm["recurrenceFrequency"])}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={form.recurrenceFrequency}
+                    onValueChange={(v) =>
+                      set("recurrenceFrequency", v as CreateGiftForm["recurrenceFrequency"])
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="weekly">Weekly</SelectItem>
                       <SelectItem value="biweekly">Biweekly</SelectItem>
@@ -293,26 +425,46 @@ function CreateGiftDialog({ open, onOpenChange, onCreated }: { open: boolean; on
                 </div>
                 <div className="grid gap-2">
                   <Label>Number of times</Label>
-                  <Input type="number" placeholder="e.g. 12" value={form.recurrenceCount} onChange={(e) => set("recurrenceCount", e.target.value)} />
+                  <Input
+                    type="number"
+                    min="1"
+                    placeholder="e.g. 12"
+                    value={form.recurrenceCount}
+                    onChange={(e) => set("recurrenceCount", e.target.value)}
+                  />
                 </div>
               </div>
             )}
           </div>
         ) : (
-          <div className="space-y-4 py-2">
-            <div className="insight">
-              <p className="text-xs font-600 uppercase tracking-wide text-muted-foreground">SIMULATED — Demo mode</p>
-              <p className="mt-1 text-sm">No real Monad transaction will occur. Gifts in live mode use time-lock smart contracts.</p>
+          <div className="space-y-3 py-2">
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">Gift summary</p>
             </div>
             <div className="detail-list">
               {[
                 ["To", form.recipient],
                 ["Amount", `${currency(Number(form.amount))} ${form.asset}`],
-                ["Unlock date", form.unlockDate],
-                ...(form.expirationDate ? [["Expires", form.expirationDate] as [string, string]] : []),
-                ...(form.isRecurring ? [["Recurrence", `${form.recurrenceFrequency} × ${form.recurrenceCount}`] as [string, string]] : []),
+                ["Unlock date", new Date(form.unlockDate).toLocaleDateString()],
+                [
+                  "Status when sent",
+                  new Date(form.unlockDate).getTime() <= Date.now()
+                    ? "Available immediately 🟢"
+                    : "Scheduled (locked) 🔒",
+                ],
+                ...(form.expirationDate
+                  ? [["Expires", new Date(form.expirationDate).toLocaleDateString()] as [string, string]]
+                  : []),
+                ...(form.isRecurring
+                  ? [
+                      ["Recurrence", `${form.recurrenceFrequency} × ${form.recurrenceCount}`] as [
+                        string,
+                        string,
+                      ],
+                    ]
+                  : []),
                 ...(form.message ? [["Message", form.message] as [string, string]] : []),
-                ["Network", "Monad (Demo)"],
+                ["Network", "Monad Testnet"],
               ].map(([k, v]) => (
                 <div key={k}>
                   <span>{k}</span>
@@ -326,12 +478,21 @@ function CreateGiftDialog({ open, onOpenChange, onCreated }: { open: boolean; on
         <DialogFooter>
           {step === "form" ? (
             <>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button onClick={() => setStep("confirm")} disabled={!form.recipient || !form.amount || !form.unlockDate}>Review gift</Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => setStep("confirm")}
+                disabled={!form.recipient || !form.amount || Number(form.amount) <= 0 || !form.unlockDate}
+              >
+                Review gift
+              </Button>
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={() => setStep("form")}>Back</Button>
+              <Button variant="outline" onClick={() => setStep("form")}>
+                Back
+              </Button>
               <Button onClick={handleConfirm} disabled={loading}>
                 {loading ? <RefreshCw className="animate-spin" /> : <Gift />}
                 Send gift
@@ -344,25 +505,113 @@ function CreateGiftDialog({ open, onOpenChange, onCreated }: { open: boolean; on
   );
 }
 
+// ─── Main page ────────────────────────────────────────────────────────────────
 function GiftsPage() {
   const [gifts, setGifts] = useState<GiftType[]>([]);
+  const [loadingGifts, setLoadingGifts] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
+  const { profile } = useProfile();
+
+  // ─── Load & auto-update statuses ──────────────────────────────────────────
+  const loadGifts = async (silent = false) => {
+    if (!silent) setLoadingGifts(true);
+    try {
+      const data = await giftService.getGifts(profile?.id);
+      // Auto-update any gifts whose status should have changed
+      const now = Date.now();
+      const toUpdate: Promise<void>[] = [];
+      const updated = data.map((g) => {
+        const live = resolveGiftStatus(g);
+        if (live !== g.status) {
+          toUpdate.push(giftService.updateGift(g.id, { status: live }, profile?.id));
+          return { ...g, status: live };
+        }
+        return g;
+      });
+      if (toUpdate.length > 0) await Promise.allSettled(toUpdate);
+      setGifts(updated);
+    } catch (e) {
+      toast.error("Failed to load gifts", {
+        description: e instanceof Error ? e.message : "Unknown error",
+      });
+    } finally {
+      setLoadingGifts(false);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    if (profile?.id) {
+      (async () => {
+        setLoadingGifts(true);
+        try {
+          const data = await giftService.getGifts(profile.id);
+          if (cancelled) return;
+          const toUpdate: Promise<void>[] = [];
+          const updated = data.map((g) => {
+            const live = resolveGiftStatus(g);
+            if (live !== g.status) {
+              toUpdate.push(giftService.updateGift(g.id, { status: live }, profile.id));
+              return { ...g, status: live };
+            }
+            return g;
+          });
+          if (toUpdate.length > 0) await Promise.allSettled(toUpdate);
+          if (!cancelled) setGifts(updated);
+        } catch (e) {
+          if (!cancelled)
+            toast.error("Failed to load gifts", {
+              description: e instanceof Error ? e.message : "Unknown error",
+            });
+        } finally {
+          if (!cancelled) setLoadingGifts(false);
+        }
+      })();
+    } else {
+      setLoadingGifts(false);
+    }
+    return () => { cancelled = true; };
+  }, [profile?.id]);
 
   const sent = gifts.filter((g) => g.direction === "sent");
   const received = gifts.filter((g) => g.direction === "received");
-  const claimable = gifts.filter((g) => g.direction === "received" && g.status === "available");
+  const claimable = gifts.filter(
+    (g) => g.direction === "received" && resolveGiftStatus(g) === "available",
+  );
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (!cancelId) return;
-    setGifts((gs) => gs.map((g) => (g.id === cancelId ? { ...g, status: "cancelled" as const } : g)));
-    setCancelId(null);
-    toast("Gift cancelled", { description: "The gift has been cancelled and funds returned." });
+    try {
+      await giftService.updateGift(cancelId, { status: "cancelled" }, profile?.id);
+      setGifts((gs) =>
+        gs.map((g) => (g.id === cancelId ? { ...g, status: "cancelled" as const } : g)),
+      );
+      toast("Gift cancelled");
+    } catch (e) {
+      toast.error("Failed to cancel gift", {
+        description: e instanceof Error ? e.message : "Unknown error",
+      });
+    } finally {
+      setCancelId(null);
+    }
   };
 
-  const handleClaim = (id: string) => {
-    setGifts((gs) => gs.map((g) => (g.id === id ? { ...g, status: "claimed" as const, claimedAt: new Date().toISOString() } : g)));
-    toast.success("Gift claimed! [SIMULATED]", { description: "Funds added to your wallet." });
+  const handleClaim = async (id: string) => {
+    const claimedAt = new Date().toISOString();
+    try {
+      await giftService.updateGift(id, { status: "claimed", claimedAt }, profile?.id);
+      setGifts((gs) =>
+        gs.map((g) =>
+          g.id === id ? { ...g, status: "claimed" as const, claimedAt } : g,
+        ),
+      );
+      toast.success("Gift claimed! 🎉", { description: "Funds added to your wallet." });
+    } catch (e) {
+      toast.error("Failed to claim gift", {
+        description: e instanceof Error ? e.message : "Unknown error",
+      });
+    }
   };
 
   const handleCreated = (gift: GiftType) => setGifts((gs) => [gift, ...gs]);
@@ -372,7 +621,7 @@ function GiftsPage() {
       <Reveal>
         <PageIntro
           title="Gifts"
-          description="Send programmable USDC gifts — time-locked, recurring, or one-time."
+          description="Send programmable crypto gifts — time-locked, recurring, or one-time."
         />
       </Reveal>
 
@@ -383,7 +632,11 @@ function GiftsPage() {
             { label: "Gifts sent", value: sent.length, icon: Send },
             { label: "Gifts received", value: received.length, icon: Inbox },
             { label: "Claimable now", value: claimable.length, icon: CheckCircle2 },
-            { label: "Total gifted", value: currency(sent.reduce((s, g) => s + g.amount, 0)), icon: Sparkles },
+            {
+              label: "Total gifted",
+              value: currency(sent.reduce((s, g) => s + g.amount, 0)),
+              icon: Sparkles,
+            },
           ].map((s) => (
             <section key={s.label} className="stat-card">
               <div className="flex items-start justify-between">
@@ -403,10 +656,13 @@ function GiftsPage() {
             <CheckCircle2 className="size-5 shrink-0 text-emerald-600" />
             <div>
               <p className="text-sm font-medium text-emerald-800 dark:text-emerald-400">
-                You have {claimable.length} gift{claimable.length > 1 ? "s" : ""} available to claim
+                You have {claimable.length} gift{claimable.length > 1 ? "s" : ""} available to
+                claim
               </p>
               <p className="text-xs text-emerald-700 dark:text-emerald-500">
-                {claimable.map((g) => `${currency(g.amount)} ${g.asset} from ${g.sender}`).join(" · ")}
+                {claimable
+                  .map((g) => `${currency(g.amount)} ${g.asset} from ${g.sender}`)
+                  .join(" · ")}
               </p>
             </div>
           </div>
@@ -425,83 +681,154 @@ function GiftsPage() {
 
       {/* Tabs */}
       <Reveal delay={80}>
-        <Tabs defaultValue="sent">
-          <TabsList className="mb-6">
-            <TabsTrigger value="sent">
-              <Send className="size-4" />
-              Sent ({sent.length})
-            </TabsTrigger>
-            <TabsTrigger value="received">
-              <Inbox className="size-4" />
-              Received ({received.length})
-            </TabsTrigger>
-            <TabsTrigger value="upcoming">
-              <CalendarDays className="size-4" />
-              Upcoming
-            </TabsTrigger>
-            <TabsTrigger value="expired">
-              <XCircle className="size-4" />
-              Expired
-            </TabsTrigger>
-          </TabsList>
+        {loadingGifts ? (
+          <div className="flex min-h-32 items-center justify-center">
+            <Loader2 className="size-7 animate-spin text-primary" />
+          </div>
+        ) : (
+          <Tabs defaultValue="sent">
+            <TabsList className="mb-6">
+              <TabsTrigger value="sent">
+                <Send className="size-4" />
+                Sent ({sent.length})
+              </TabsTrigger>
+              <TabsTrigger value="received">
+                <Inbox className="size-4" />
+                Received ({received.length})
+              </TabsTrigger>
+              <TabsTrigger value="upcoming">
+                <CalendarDays className="size-4" />
+                Upcoming ({gifts.filter((g) => resolveGiftStatus(g) === "scheduled").length})
+              </TabsTrigger>
+              <TabsTrigger value="expired">
+                <XCircle className="size-4" />
+                Expired
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="sent">
-            <div className="space-y-4">
-              {sent.length === 0 ? (
-                <EmptyState icon={Gift} title="No gifts sent" description="Create your first programmable gift." action={<Button onClick={() => setCreateOpen(true)}><Plus />Send a gift</Button>} />
-              ) : (
-                sent.map((g) => <GiftCard key={g.id} gift={g} onCancel={(id) => setCancelId(id)} onClaim={handleClaim} />)
-              )}
-            </div>
-          </TabsContent>
+            <TabsContent value="sent">
+              <div className="space-y-4">
+                {sent.length === 0 ? (
+                  <EmptyState
+                    icon={Gift}
+                    title="No gifts sent"
+                    description="Create your first programmable gift."
+                    action={
+                      <Button onClick={() => setCreateOpen(true)}>
+                        <Plus />
+                        Send a gift
+                      </Button>
+                    }
+                  />
+                ) : (
+                  sent.map((g) => (
+                    <GiftCard
+                      key={g.id}
+                      gift={g}
+                      onCancel={(id) => setCancelId(id)}
+                      onClaim={handleClaim}
+                    />
+                  ))
+                )}
+              </div>
+            </TabsContent>
 
-          <TabsContent value="received">
-            <div className="space-y-4">
-              {received.length === 0 ? (
-                <EmptyState icon={Inbox} title="No gifts received" description="You haven't received any programmable gifts yet." />
-              ) : (
-                received.map((g) => <GiftCard key={g.id} gift={g} onCancel={(id) => setCancelId(id)} onClaim={handleClaim} />)
-              )}
-            </div>
-          </TabsContent>
+            <TabsContent value="received">
+              <div className="space-y-4">
+                {received.length === 0 ? (
+                  <EmptyState
+                    icon={Inbox}
+                    title="No gifts received"
+                    description="You haven't received any programmable gifts yet."
+                  />
+                ) : (
+                  received.map((g) => (
+                    <GiftCard
+                      key={g.id}
+                      gift={g}
+                      onCancel={(id) => setCancelId(id)}
+                      onClaim={handleClaim}
+                    />
+                  ))
+                )}
+              </div>
+            </TabsContent>
 
-          <TabsContent value="upcoming">
-            <div className="space-y-4">
-              {gifts.filter((g) => g.status === "scheduled").length === 0 ? (
-                <EmptyState icon={Clock} title="No upcoming gifts" description="All scheduled gifts will appear here." />
-              ) : (
-                gifts
-                  .filter((g) => g.status === "scheduled")
-                  .map((g) => <GiftCard key={g.id} gift={g} onCancel={(id) => setCancelId(id)} onClaim={handleClaim} />)
-              )}
-            </div>
-          </TabsContent>
+            <TabsContent value="upcoming">
+              <div className="space-y-4">
+                {gifts.filter((g) => resolveGiftStatus(g) === "scheduled").length === 0 ? (
+                  <EmptyState
+                    icon={Clock}
+                    title="No upcoming gifts"
+                    description="All scheduled gifts will appear here."
+                  />
+                ) : (
+                  gifts
+                    .filter((g) => resolveGiftStatus(g) === "scheduled")
+                    .map((g) => (
+                      <GiftCard
+                        key={g.id}
+                        gift={g}
+                        onCancel={(id) => setCancelId(id)}
+                        onClaim={handleClaim}
+                      />
+                    ))
+                )}
+              </div>
+            </TabsContent>
 
-          <TabsContent value="expired">
-            <div className="space-y-4">
-              {gifts.filter((g) => g.status === "expired").length === 0 ? (
-                <EmptyState icon={XCircle} title="No expired gifts" description="Unclaimed gifts past their expiration date appear here." />
-              ) : (
-                gifts
-                  .filter((g) => g.status === "expired")
-                  .map((g) => <GiftCard key={g.id} gift={g} onCancel={(id) => setCancelId(id)} onClaim={handleClaim} />)
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="expired">
+              <div className="space-y-4">
+                {gifts.filter((g) => resolveGiftStatus(g) === "expired").length === 0 ? (
+                  <EmptyState
+                    icon={XCircle}
+                    title="No expired gifts"
+                    description="Unclaimed gifts past their expiration date appear here."
+                  />
+                ) : (
+                  gifts
+                    .filter((g) => resolveGiftStatus(g) === "expired")
+                    .map((g) => (
+                      <GiftCard
+                        key={g.id}
+                        gift={g}
+                        onCancel={(id) => setCancelId(id)}
+                        onClaim={handleClaim}
+                      />
+                    ))
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
       </Reveal>
 
-      <CreateGiftDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={handleCreated} />
+      <CreateGiftDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={handleCreated}
+        profileId={profile?.id}
+        displayName={profile?.display_name ?? undefined}
+        walletAddress={profile?.wallet_address ?? undefined}
+      />
 
       <AlertDialog open={!!cancelId} onOpenChange={(o) => !o && setCancelId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel this gift?</AlertDialogTitle>
-            <AlertDialogDescription>The gift will be cancelled and the recipient won't be able to claim it. This cannot be undone.</AlertDialogDescription>
+            <AlertDialogDescription>
+              The gift will be cancelled and the recipient won't be able to claim it. This cannot be
+              undone.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep it</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCancel} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Cancel gift</AlertDialogAction>
+            <AlertDialogAction
+              onClick={handleCancel}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cancel gift
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

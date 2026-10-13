@@ -94,8 +94,7 @@ const flows: Record<string, Flow> = {
       { message: "🧾 Who is this invoice for? Enter the client's name.", field: { key: "clientName", label: "Client name", type: "text", placeholder: "e.g. Acme Studio", required: true } },
       { message: "📧 What's the client's email?", field: { key: "clientEmail", label: "Client email", type: "text", placeholder: "finance@client.com", required: true } },
       { message: "📝 What's the invoice title?", field: { key: "title", label: "Invoice title", type: "text", placeholder: "e.g. Product design retainer", required: true } },
-      { message: "💰 What's the total amount?", field: { key: "amount", label: "Amount", type: "number", placeholder: "e.g. 1500", required: true } },
-      { message: "🪙 Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "WETH", "MON"] } },
+      { message: "💰 What's the total amount in USDC?", field: { key: "amount", label: "Amount (USDC)", type: "number", placeholder: "e.g. 1500", required: true } },
       { message: "📅 What's the due date?", field: { key: "dueDate", label: "Due date", type: "date", required: true } },
       { message: "📌 Any notes for the client? (optional)", field: { key: "notes", label: "Notes", type: "text", placeholder: "e.g. Payment due within 14 days" } },
     ],
@@ -111,8 +110,7 @@ const flows: Record<string, Flow> = {
     id: "send_money", title: "Send money",
     steps: [
       { message: "📤 Who are you sending to? Enter their wallet address (0x…).", field: { key: "recipient", label: "Recipient", type: "text", placeholder: "0x…", required: true } },
-      { message: "💸 How much?", field: { key: "amount", label: "Amount", type: "number", placeholder: "e.g. 500", required: true } },
-      { message: "🪙 Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "MON", "WETH"] } },
+      { message: "💸 How much MON?", field: { key: "amount", label: "Amount", type: "number", placeholder: "e.g. 500", required: true } },
       { message: "📝 Any memo? (optional)", field: { key: "memo", label: "Memo", type: "text", placeholder: "e.g. Invoice #104" } },
     ],
     buildConfirmSummary: (d) => ({
@@ -127,8 +125,7 @@ const flows: Record<string, Flow> = {
     id: "create_gift", title: "Create a programmable gift",
     steps: [
       { message: "🎁 Who is the gift for?", field: { key: "recipient", label: "Recipient", type: "text", placeholder: "e.g. Mom, Alex", required: true } },
-      { message: "💰 How much?", field: { key: "amount", label: "Amount", type: "number", placeholder: "e.g. 100", required: true } },
-      { message: "🪙 Which asset?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "MON", "WETH"] } },
+      { message: "💰 How much MON?", field: { key: "amount", label: "Amount", type: "number", placeholder: "e.g. 100", required: true } },
       { message: "📅 When should it unlock?", field: { key: "unlockDate", label: "Unlock date", type: "date", required: true } },
       { message: "⏳ Should it expire? (optional — skip to leave open)", field: { key: "expirationDate", label: "Expiry date", type: "date" } },
       { message: "🔄 Is this recurring?", field: { key: "recurring", label: "Recurring?", type: "chips", options: ["No — one-time", "Yes — weekly", "Yes — monthly"] } },
@@ -147,8 +144,7 @@ const flows: Record<string, Flow> = {
   set_salary_distribution: {
     id: "set_salary_distribution", title: "Set up salary distribution",
     steps: [
-      { message: "💼 What's your monthly salary amount?", field: { key: "salary", label: "Monthly salary", type: "number", placeholder: "e.g. 2000", required: true } },
-      { message: "🪙 Which asset do you receive salary in?", field: { key: "asset", label: "Asset", type: "chips", options: ["USDC", "WETH", "MON"] } },
+      { message: "💼 What's your monthly salary in MON?", field: { key: "salary", label: "Monthly salary (MON)", type: "number", placeholder: "e.g. 2000", required: true } },
       { message: "🏦 What % to Personal?", field: { key: "personal", label: "Personal %", type: "number", placeholder: "e.g. 60", required: true } },
       { message: "🐖 What % to Savings?", field: { key: "savings", label: "Savings %", type: "number", placeholder: "e.g. 20", required: true } },
       { message: "🏠 What % to Rent?", field: { key: "rent", label: "Rent %", type: "number", placeholder: "e.g. 10", required: true } },
@@ -178,7 +174,7 @@ const categories = [
   { id: "actions", label: "Take Action", icon: Zap, chips: [{ text: "Send money", flowId: "send_money" }, "Receive assets", { text: "Create an invoice", flowId: "create_invoice" }, { text: "Send a gift", flowId: "create_gift" }, { text: "Set up salary", flowId: "set_salary_distribution" }] as ChipDef[] },
   { id: "money", label: "My Money", icon: Wallet, chips: ["How much do I have?", "How much did I spend?", "How much did I receive?", "Show my biggest transactions.", "What is my total balance?"] as ChipDef[] },
   { id: "analytics", label: "Analytics", icon: BarChart3, chips: ["Give me a financial summary.", "Show my income vs expenses.", "Show my portfolio breakdown.", "What's my net flow?", "Summarize my finances."] as ChipDef[] },
-  { id: "portfolio", label: "Portfolio", icon: TrendingUp, chips: ["How is my portfolio distributed?", "How much USDC do I have?", "How much MON do I have?"] as ChipDef[] },
+  { id: "portfolio", label: "Portfolio", icon: TrendingUp, chips: ["How is my portfolio distributed?", "How much MON do I have?", "What is my total balance?"] as ChipDef[] },
   { id: "payments", label: "Payments", icon: CreditCard, chips: ["Which invoices are unpaid?", "Show my invoices.", "How much am I owed?"] as ChipDef[] },
   { id: "gifts", label: "Gifts", icon: Gift, chips: [{ text: "Send a programmable gift", flowId: "create_gift" }, "Show my active gifts.", "Show gifts I've sent."] as ChipDef[] },
 ];
@@ -608,13 +604,10 @@ function InlineInvoiceModal({ open, onOpenChange, prefill, onCreated }: {
             <div className="grid gap-1.5"><Label>Client name *</Label><Input value={form.clientName} onChange={(e) => setForm((f) => ({ ...f, clientName: e.target.value }))} /></div>
             <div className="grid gap-1.5"><Label>Client email *</Label><Input type="email" value={form.clientEmail} onChange={(e) => setForm((f) => ({ ...f, clientEmail: e.target.value }))} /></div>
             <div className="grid gap-1.5 sm:col-span-2"><Label>Invoice title *</Label><Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} /></div>
-            <div className="grid gap-1.5"><Label>Amount *</Label><Input type="number" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} /></div>
+            <div className="grid gap-1.5"><Label>Amount (USDC) *</Label><Input type="number" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} /></div>
             <div className="grid gap-1.5">
               <Label>Asset</Label>
-              <Select value={form.asset} onValueChange={(v) => setForm((f) => ({ ...f, asset: v as AssetSymbol }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{["USDC", "WETH", "MON"].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
-              </Select>
+              <div className="flex h-10 items-center gap-2 rounded-md border border-border bg-muted/40 px-3 text-sm font-medium">MON — Monad</div>
             </div>
             <div className="grid gap-1.5"><Label>Due date *</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))} /></div>
           </div>
@@ -648,7 +641,7 @@ function InlineGiftModal({ open, onOpenChange, prefill, onDone }: { open: boolea
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5 sm:col-span-2"><Label>Recipient</Label><Input value={form.recipient} onChange={(e) => setForm((f) => ({ ...f, recipient: e.target.value }))} /></div>
             <div className="grid gap-1.5"><Label>Amount</Label><Input type="number" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} /></div>
-            <div className="grid gap-1.5"><Label>Asset</Label><Select value={form.asset} onValueChange={(v) => setForm((f) => ({ ...f, asset: v as AssetSymbol }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["USDC", "MON", "WETH"].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Asset</Label><div className="flex h-10 items-center gap-2 rounded-md border border-border bg-muted/40 px-3 text-sm font-medium">MON — Monad</div></div>
             <div className="grid gap-1.5"><Label>Unlock date</Label><Input type="date" value={form.unlockDate} onChange={(e) => setForm((f) => ({ ...f, unlockDate: e.target.value }))} /></div>
             <div className="grid gap-1.5"><Label>Expiry (optional)</Label><Input type="date" value={form.expirationDate} onChange={(e) => setForm((f) => ({ ...f, expirationDate: e.target.value }))} /></div>
           </div>
@@ -681,8 +674,8 @@ function InlineSalaryModal({ open, onOpenChange, prefill, onDone }: { open: bool
         <DialogHeader><DialogTitle>💼 Salary distribution</DialogTitle><DialogDescription>Total must equal 100%.</DialogDescription></DialogHeader>
         <div className="space-y-4 py-2">
           <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5"><Label>Monthly salary</Label><Input type="number" value={form.salary} onChange={(e) => setForm((f) => ({ ...f, salary: e.target.value }))} /></div>
-            <div className="grid gap-1.5"><Label>Asset</Label><Select value={form.asset} onValueChange={(v) => setForm((f) => ({ ...f, asset: v as AssetSymbol }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["USDC", "WETH", "MON"].map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid gap-1.5"><Label>Monthly salary (MON)</Label><Input type="number" value={form.salary} onChange={(e) => setForm((f) => ({ ...f, salary: e.target.value }))} /></div>
+            <div className="grid gap-1.5"><Label>Asset</Label><div className="flex h-10 items-center gap-2 rounded-md border border-border bg-muted/40 px-3 text-sm font-medium">MON — Monad</div></div>
           </div>
           {([["Personal", "personal"], ["Savings", "savings"], ["Rent", "rent"], ["Family", "family"]] as [string, keyof typeof form][]).map(([label, key]) => (
             <div key={key} className="flex items-center gap-4">

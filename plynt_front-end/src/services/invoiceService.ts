@@ -54,7 +54,7 @@ export const invoiceService = {
       await wait();
       return [...memInvoices];
     }
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("invoices")
       .select("*")
       .eq("profile_id", profileId)
@@ -68,7 +68,7 @@ export const invoiceService = {
       await wait();
       return memInvoices.find((i) => i.id === id);
     }
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("invoices")
       .select("*")
       .eq("id", id)
@@ -84,7 +84,7 @@ export const invoiceService = {
       memInvoices = [inv, ...memInvoices];
       return inv;
     }
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("invoices")
       .insert(invoiceToRow(inv, profileId))
       .select()
@@ -102,17 +102,17 @@ export const invoiceService = {
       return memInvoices[idx];
     }
     const updates: Record<string, unknown> = {};
-    if (patch.clientName !== undefined) updates.client_name = patch.clientName;
-    if (patch.clientEmail !== undefined) updates.client_email = patch.clientEmail;
-    if (patch.title !== undefined) updates.title = patch.title;
-    if (patch.description !== undefined) updates.description = patch.description;
-    if (patch.amount !== undefined) updates.amount = patch.amount;
-    if (patch.asset !== undefined) updates.asset = patch.asset;
-    if (patch.status !== undefined) updates.status = patch.status;
-    if (patch.dueDate !== undefined) updates.due_date = patch.dueDate;
-    if (patch.notes !== undefined) updates.notes = patch.notes;
-    if (patch.items !== undefined) updates.items = patch.items;
-    const { data, error } = await supabase
+    if (patch.clientName !== undefined) updates["client_name"] = patch.clientName;
+    if (patch.clientEmail !== undefined) updates["client_email"] = patch.clientEmail;
+    if (patch.title !== undefined) updates["title"] = patch.title;
+    if (patch.description !== undefined) updates["description"] = patch.description;
+    if (patch.amount !== undefined) updates["amount"] = patch.amount;
+    if (patch.asset !== undefined) updates["asset"] = patch.asset;
+    if (patch.status !== undefined) updates["status"] = patch.status;
+    if (patch.dueDate !== undefined) updates["due_date"] = patch.dueDate;
+    if (patch.notes !== undefined) updates["notes"] = patch.notes;
+    if (patch.items !== undefined) updates["items"] = patch.items;
+    const { data, error } = await (supabase as any)
       .from("invoices")
       .update(updates)
       .eq("id", id)
@@ -129,7 +129,7 @@ export const invoiceService = {
       memInvoices = memInvoices.filter((i) => i.id !== id);
       return;
     }
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("invoices")
       .delete()
       .eq("id", id)

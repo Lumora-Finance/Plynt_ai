@@ -48,9 +48,13 @@ export function useWalletData() {
   const embeddedWallet = wallets.find((w) => w.walletClientType === 'privy');
   const address = embeddedWallet?.address;
 
+  // While Privy is loading OR authenticated but wallet hasn't been created yet,
+  // keep showing a loading state instead of "no wallet found".
+  // We give a generous 15-second grace window — wallet creation is usually
+  // instant but can take a few seconds on first login.
   const privyLoading = !ready;
-  const walletCreating = ready && authenticated && !address;
-  const loading = privyLoading || walletCreating || fetching;
+  const walletPending = ready && authenticated && !address;
+  const loading = privyLoading || walletPending || fetching;
 
   useEffect(() => {
     if (!address) return;

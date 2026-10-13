@@ -142,39 +142,34 @@ function RootComponent() {
 
   // PrivyProvider accesses localStorage at initialisation which crashes on the
   // server. We defer it to the first client render using a mounted flag.
-  // On the server (and during the first render pass) we render a plain
-  // QueryClientProvider + Outlet so TanStack Router can still hydrate the
-  // page shell without Privy — Privy will mount immediately after hydration.
+  // IMPORTANT: We always render PrivyProvider once mounted so that the OAuth
+  // callback URL (/?code=...&state=...) is handled correctly — without it,
+  // useRequireAuth fires a redirect before Privy processes the OAuth code and
+  // the user sees "Authentication failed".
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
+  const inner = (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <TooltipProvider delayDuration={250}>
+          <AppShell>
+            <Outlet />
+          </AppShell>
+          <Toaster richColors={false} />
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+
   if (!mounted) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <TooltipProvider delayDuration={250}>
-            <AppShell>
-              <Outlet />
-            </AppShell>
-            <Toaster richColors={false} />
-          </TooltipProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    );
+    // Server / first render — no Privy yet, just render the shell
+    return inner;
   }
 
   return (
     <PrivyProvider appId={appId} config={privyConfig}>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <TooltipProvider delayDuration={250}>
-            <AppShell>
-              <Outlet />
-            </AppShell>
-            <Toaster richColors={false} />
-          </TooltipProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
+      {inner}
     </PrivyProvider>
   );
 }

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowDownLeft,
   Building2,
@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clock,
   Edit,
+  Loader2,
   PieChart,
   RefreshCw,
   Wallet,
@@ -24,9 +25,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PageIntro, currency } from "@/components/shared/common";
+import { MonLogo } from "@/components/shared/mon-logo";
 import { Reveal } from "@/components/shared/motion";
+import { salaryService } from "@/services/salaryService";
+import { useProfile } from "@/hooks/use-profile";
 import type { SalaryConfig, SalaryRecord, SalarySplitRule } from "@/types";
 
 export const Route = createFileRoute("/salary")({
@@ -60,7 +65,6 @@ const HEX_COLORS = [
 function AllocationBar({ rules }: { rules: SalarySplitRule[] }) {
   return (
     <div className="space-y-4">
-      {/* Visual bar */}
       <div className="flex h-4 w-full overflow-hidden rounded-md">
         {rules.map((rule, i) => (
           <div
@@ -71,7 +75,6 @@ function AllocationBar({ rules }: { rules: SalarySplitRule[] }) {
           />
         ))}
       </div>
-      {/* Legend */}
       <div className="grid gap-2 sm:grid-cols-2">
         {rules.map((rule, i) => (
           <div key={rule.id} className="flex items-center gap-2 text-sm">
@@ -85,6 +88,115 @@ function AllocationBar({ rules }: { rules: SalarySplitRule[] }) {
   );
 }
 
+// ─── Setup / Create salary config dialog ─────────────────────────────────────
+function SetupSalaryDialog({
+  open,
+  onOpenChange,
+  onSaved,
+  profileId,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onSaved: (config: SalaryConfig) => void;
+  profileId?: string | undefined;
+}) {
+  const [employer, setEmployer] = useState("");
+  const [amount, setAmount] = useState("");
+  const [frequency, setFrequency] = useState<"weekly" | "biweekly" | "monthly" | "quarterly">("monthly");
+  const [nextPayment, setNextPayment] = useState(new Date().toISOString().slice(0, 10));
+  const [loading, setLoading] = useState(false);
+
+  const handleSave = async () => {
+    if (!employer || !amount || !nextPayment) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+    if (!profileId) {
+      toast.error("Sign in required.");
+      return;
+    }
+    setLoading(true);
+    const config: SalaryConfig = {
+      id: crypto.randomUUID(),
+      employer,
+      amount: Number(amount),
+      asset: "MON",
+      frequency,
+      nextPayment,
+      distributionRules: [
+        { id: "rule-1", label: "Personal",     destination: "", percentage: 60, asset: "MON" },
+        { id: "rule-2", label: "Savings",      destination: "", percentage: 20, asset: "MON" },
+        { id: "rule-3", label: "Investments",  destination: "", percentage: 20, asset: "MON" },
+      ],
+      autoDistribute: false,
+    };
+    try {
+      const saved = await salaryService.setConfig(config, profileId);
+      onSaved(saved);
+      onOpenChange(false);
+      toast.success("Salary configured!", { description: `${currency(saved.amount)} ${saved.asset} from ${saved.employer}` });
+    } catch (e) {
+      toast.error("Failed to save salary", { description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Set up salary tracking</DialogTitle>
+          <DialogDescription>Enter your salary details. You can always update distribution rules after.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="grid gap-2">
+            <Label>Employer name</Label>
+            <Input placeholder="e.g. Acme Corp" value={employer} onChange={(e) => setEmployer(e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <Label>Salary amount</Label>
+              <Input type="number" placeholder="e.g. 5000" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Asset</Label>
+              <div className="flex h-10 items-center gap-2 rounded-md border border-border bg-muted/40 px-3">
+                <MonLogo size="sm" />
+                <span className="text-sm font-medium">MON</span>
+              </div>
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label>Frequency</Label>
+            <Select value={frequency} onValueChange={(v) => setFrequency(v as typeof frequency)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="biweekly">Biweekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+                <SelectItem value="quarterly">Quarterly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label>Next payment date</Label>
+            <Input type="date" value={nextPayment} onChange={(e) => setNextPayment(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleSave} disabled={loading}>
+            {loading ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+            Save salary
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Edit distribution dialog ─────────────────────────────────────────────────
 function EditDistributionDialog({
   open,
   onOpenChange,
@@ -119,11 +231,11 @@ function EditDistributionDialog({
   const handleSave = async () => {
     if (!valid) return;
     setLoading(true);
-    await new Promise((res) => setTimeout(res, 500));
+    await new Promise((res) => setTimeout(res, 300));
     setLoading(false);
     onSave(rules);
     onOpenChange(false);
-    toast.success("Distribution updated", { description: "Your salary will be allocated according to the new rules. [SIMULATED]" });
+    toast.success("Distribution updated");
   };
 
   return (
@@ -180,15 +292,65 @@ const statusCls: Record<string, string> = {
 
 function SalaryPage() {
   const [config, setConfig] = useState<SalaryConfig | null>(null);
-  const [history] = useState<SalaryRecord[]>([]);
+  const [history, setHistory] = useState<SalaryRecord[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const { profile } = useProfile();
+
+  // ─── Load salary data from Supabase ──────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoadingData(true);
+      try {
+        const [cfg, hist] = await Promise.all([
+          salaryService.getConfig(profile?.id),
+          salaryService.getHistory(profile?.id),
+        ]);
+        if (!cancelled) {
+          setConfig(cfg);
+          setHistory(hist);
+        }
+      } catch (e) {
+        if (!cancelled) toast.error("Failed to load salary data", { description: e instanceof Error ? e.message : "Unknown error" });
+      } finally {
+        if (!cancelled) setLoadingData(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [profile?.id]);
 
   const received = history.filter((h) => h.status === "received");
   const totalReceived = received.reduce((s, r) => s + r.amount, 0);
 
-  const handleSaveRules = (rules: SalarySplitRule[]) => {
-    setConfig((c) => c ? { ...c, distributionRules: rules } : c);
+  const handleSaveRules = async (rules: SalarySplitRule[]) => {
+    try {
+      await salaryService.updateRules(rules, profile?.id);
+      setConfig((c) => c ? { ...c, distributionRules: rules } : c);
+    } catch (e) {
+      toast.error("Failed to save rules", { description: e instanceof Error ? e.message : "Unknown error" });
+    }
   };
+
+  const handleAutoDistributeToggle = async (v: boolean) => {
+    try {
+      await salaryService.updateAutoDistribute(v, profile?.id);
+      setConfig((c) => c ? { ...c, autoDistribute: v } : c);
+      toast(v ? "Auto-distribution enabled" : "Auto-distribution disabled");
+    } catch (e) {
+      toast.error("Failed to update setting", { description: e instanceof Error ? e.message : "Unknown error" });
+    }
+  };
+
+  if (loadingData) {
+    return (
+      <div className="flex min-h-64 items-center justify-center">
+        <Loader2 className="size-7 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!config) {
     return (
@@ -200,16 +362,26 @@ function SalaryPage() {
           />
         </Reveal>
         <Reveal delay={40}>
-          <div className="flex min-h-64 flex-col items-center justify-center gap-4 border border-dashed border-border p-8 text-center">
-            <Building2 className="size-10 text-primary" />
+          <div className="flex min-h-64 flex-col items-center justify-center gap-6 border border-dashed border-border p-8 text-center">
+            <Building2 className="size-12 text-primary" />
             <div>
-              <h3 className="font-semibold">No salary configured yet</h3>
+              <h3 className="text-lg font-semibold">No salary configured yet</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Salary tracking and automatic distribution will appear here once configured.
+                Set up your salary to track payments and configure automatic distribution rules.
               </p>
             </div>
+            <Button onClick={() => setSetupOpen(true)} size="lg">
+              <Building2 className="size-4" />
+              Set up salary
+            </Button>
           </div>
         </Reveal>
+        <SetupSalaryDialog
+          open={setupOpen}
+          onOpenChange={setSetupOpen}
+          onSaved={(cfg) => setConfig(cfg)}
+          profileId={profile?.id}
+        />
       </div>
     );
   }
@@ -227,7 +399,12 @@ function SalaryPage() {
       <Reveal delay={40}>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: "Monthly salary", value: currency(config.amount), icon: ArrowDownLeft },
+            { label: "Monthly salary", value: (
+                <span className="flex items-center gap-1.5">
+                  <MonLogo size="sm" showText={false} />
+                  {currency(config.amount)} MON
+                </span>
+              ), icon: ArrowDownLeft },
             { label: "Total received (YTD)", value: currency(totalReceived), icon: Wallet },
             { label: "Next payment", value: new Date(config.nextPayment).toLocaleDateString(), icon: CalendarClock },
             { label: "Employer", value: config.employer, icon: Building2 },
@@ -252,17 +429,14 @@ function SalaryPage() {
                 <PieChart className="size-5 text-primary" />
                 Salary distribution
               </h2>
-              <p className="section-subtitle">How your {currency(config.amount)} {config.asset} salary is allocated.</p>
+              <p className="section-subtitle">How your {currency(config.amount)} MON salary is allocated.</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm">
                 <Switch
                   id="auto-dist"
                   checked={config.autoDistribute}
-                  onCheckedChange={(v) => {
-                    setConfig((c) => ({ ...c, autoDistribute: v }));
-                    toast(v ? "Auto-distribution enabled" : "Auto-distribution disabled");
-                  }}
+                  onCheckedChange={handleAutoDistributeToggle}
                 />
                 <Label htmlFor="auto-dist">Auto-distribute</Label>
               </div>
@@ -273,25 +447,30 @@ function SalaryPage() {
             </div>
           </div>
 
-          <AllocationBar rules={config.distributionRules} />
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {config.distributionRules.map((rule, i) => (
-              <div key={rule.id} className="flex items-center justify-between rounded-md border border-border p-4">
-                <div className="flex items-center gap-3">
-                  <span className="size-3 shrink-0 rounded-sm" style={{ backgroundColor: HEX_COLORS[i % HEX_COLORS.length] }} />
-                  <div>
-                    <p className="text-sm font-medium">{rule.label}</p>
-                    <p className="text-xs text-muted-foreground">{rule.destination}</p>
+          {config.distributionRules.length > 0 ? (
+            <>
+              <AllocationBar rules={config.distributionRules} />
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                {config.distributionRules.map((rule, i) => (
+                  <div key={rule.id} className="flex items-center justify-between rounded-md border border-border p-4">
+                    <div className="flex items-center gap-3">
+                      <span className="size-3 shrink-0 rounded-sm" style={{ backgroundColor: HEX_COLORS[i % HEX_COLORS.length] }} />
+                      <div>
+                        <p className="text-sm font-medium">{rule.label}</p>
+                        <p className="text-xs text-muted-foreground">{rule.destination || "—"}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono font-semibold text-primary">{rule.percentage}%</p>
+                      <p className="text-xs text-muted-foreground">{currency(config.amount * rule.percentage / 100)}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-mono font-semibold text-primary">{rule.percentage}%</p>
-                  <p className="text-xs text-muted-foreground">{currency(config.amount * rule.percentage / 100)}</p>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">No distribution rules configured. Click Edit to add rules.</p>
+          )}
         </section>
       </Reveal>
 
@@ -302,42 +481,52 @@ function SalaryPage() {
             <h2 className="section-title">Payment history</h2>
             <p className="section-subtitle">All salary payments from {config.employer}.</p>
           </div>
-          <div className="overflow-hidden border border-border bg-card">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-muted/60 text-xs text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Period</th>
-                  <th className="px-4 py-3 font-medium">Employer</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 text-right font-medium">Amount</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {history.map((record) => (
-                  <tr key={record.id} className="transition-colors hover:bg-muted/30">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <span className="action-icon size-8 shrink-0">
-                          {record.status === "received" ? <CheckCircle2 className="size-4" /> : <Clock className="size-4" />}
-                        </span>
-                        <span className="font-medium">{record.period}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{record.employer}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-600 capitalize ${statusCls[record.status]}`}>
-                        <span className="size-1.5 rounded-full bg-current" />
-                        {record.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono font-medium">
-                      {currency(record.amount)} {record.asset}
-                    </td>
+          {history.length === 0 ? (
+            <div className="flex min-h-32 flex-col items-center justify-center gap-2 border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              <Clock className="size-8" />
+              <p>No payment records yet. Records will appear here as salary payments are logged.</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden border border-border bg-card">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-muted/60 text-xs text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Period</th>
+                    <th className="px-4 py-3 font-medium">Employer</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 text-right font-medium">Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {history.map((record) => (
+                    <tr key={record.id} className="transition-colors hover:bg-muted/30">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <span className="action-icon size-8 shrink-0">
+                            {record.status === "received" ? <CheckCircle2 className="size-4" /> : <Clock className="size-4" />}
+                          </span>
+                          <span className="font-medium">{record.period}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{record.employer}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-600 capitalize ${statusCls[record.status] ?? ""}`}>
+                          <span className="size-1.5 rounded-full bg-current" />
+                          {record.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono font-medium">
+                        <span className="inline-flex items-center gap-1.5">
+                          <MonLogo size="xs" showText={false} />
+                          {currency(record.amount)} MON
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </Reveal>
 

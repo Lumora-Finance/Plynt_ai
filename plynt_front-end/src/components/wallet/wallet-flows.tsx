@@ -5,9 +5,11 @@ import {
   Check,
   Coins,
   Copy,
+  DollarSign,
   ExternalLink,
   Fuel,
   Loader2,
+  Repeat2,
   Share2,
   ShieldCheck,
   UserRound,
@@ -34,6 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { usePrivyUser } from '@/hooks/use-privy-user';
+import { monadTestnet } from '@/lib/privy';
 import type { AssetSymbol, TransactionDraft } from '@/types';
 import { shorten } from '@/components/shared/common';
 import type { WalletAsset } from '@/hooks/use-wallet-data';
@@ -122,9 +125,7 @@ export function ReceiveDialog({
   const handleFund = async () => {
     if (!address) return;
     try {
-      await fundWallet(address, {
-        // MoonPay sandbox — configured in privyConfig
-      });
+      await fundWallet({ address, options: { chain: monadTestnet } });
     } catch {
       toast.error('Could not open funding modal');
     }
@@ -542,12 +543,16 @@ export function SendDialog({
 export function WalletActionButtons({
   onSend,
   onReceive,
+  onSwap,
+  onConvert,
 }: {
   onSend: () => void;
   onReceive: () => void;
+  onSwap?: () => void;
+  onConvert?: () => void;
 }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       <Button onClick={onSend}>
         <ArrowUpRight className="size-4" />
         Send
@@ -556,6 +561,18 @@ export function WalletActionButtons({
         <ArrowDownLeft className="size-4" />
         Receive
       </Button>
+      {onSwap && (
+        <Button variant="outline" onClick={onSwap}>
+          <Repeat2 className="size-4" />
+          Swap
+        </Button>
+      )}
+      {onConvert && (
+        <Button variant="outline" onClick={onConvert}>
+          <DollarSign className="size-4" />
+          Convert
+        </Button>
+      )}
     </div>
   );
 }
