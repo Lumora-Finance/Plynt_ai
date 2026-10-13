@@ -23,7 +23,7 @@ import {
   Wallet,
   WalletCards,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import {

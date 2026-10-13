@@ -139,10 +139,15 @@ function DashboardPage() {
   const [mainnetDialog, setMainnetDialog] = useState(false);
   const [comingSoonType, setComingSoonType] = useState<'swap' | 'convert' | null>(null);
 
-  // Shared visibility toggle — synced with wallet page via localStorage
-  const [visible, setVisible] = useState(() => {
-    try { return localStorage.getItem(VISIBILITY_KEY) !== 'false'; } catch { return true; }
-  });
+  // Balance visibility — default true on both server and client to avoid
+  // hydration mismatch, then sync from localStorage after mount
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(VISIBILITY_KEY);
+      if (stored !== null) setVisible(stored !== 'false');
+    } catch { /* ignore */ }
+  }, []);
 
   const { displayName, ready } = usePrivyUser();
   const { data: wallet, loading: walletLoading, walletTimedOut } = useWalletData();

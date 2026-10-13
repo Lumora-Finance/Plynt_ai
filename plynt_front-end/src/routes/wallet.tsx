@@ -135,9 +135,9 @@ function ComingSoonDialog({ open, onClose }: { open: boolean; onClose: () => voi
 function WalletPage() {
   const nav = useNavigate();
 
-  const [visible, setVisible] = useState(() => {
-    try { return localStorage.getItem(VISIBILITY_KEY) !== 'false'; } catch { return true; }
-  });
+  // Default true on both server and client to avoid hydration mismatch,
+  // then sync from localStorage after first mount
+  const [visible, setVisible] = useState(true);
   const [send, setSend] = useState(false);
   const [receive, setReceive] = useState(false);
   const [mainnetDialog, setMainnetDialog] = useState(false);
@@ -145,6 +145,13 @@ function WalletPage() {
 
   const { data, loading, error, address, refetch, walletTimedOut } = useWalletData();
   const { transactions, loading: txLoading } = useTransactions();
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(VISIBILITY_KEY);
+      if (stored !== null) setVisible(stored !== 'false');
+    } catch { /* noop */ }
+  }, []);
 
   useEffect(() => {
     try { localStorage.setItem(VISIBILITY_KEY, String(visible)); } catch { /* noop */ }
