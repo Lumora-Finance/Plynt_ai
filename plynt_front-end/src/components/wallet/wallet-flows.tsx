@@ -229,7 +229,6 @@ export function SendDialog({
   );
   const [amount, setAmount] = useState(initialDraft?.amount?.toString() ?? '');
   const [asset, setAsset] = useState<AssetSymbol>(initialDraft?.asset ?? 'MON');
-  const [memo, setMemo] = useState(initialDraft?.memo ?? '');
   const [error, setError] = useState('');
   const [txHash, setTxHash] = useState('');
 
@@ -238,9 +237,8 @@ export function SendDialog({
   const { profile } = useProfile();
 
   const MONAD_CHAIN_ID = 10143;
-  const fee = 0.000021;
 
-  // Platform fee: 0.6% of amount (hardcoded, goes nowhere for now — air tx)
+  // Platform fee: 0.6% of amount
   const platformFee = amount && !isNaN(Number(amount)) ? calcPlatformFee(Number(amount)) : 0;
 
   const availableAssets =
@@ -326,14 +324,13 @@ export function SendDialog({
           usdValue,
           platformFee,
           status: 'confirmed',
-          memo: memo || undefined,
           explorerUrl: hash ? `https://testnet.monadscan.com/tx/${hash}` : undefined,
         });
 
         await createNotification(
           profile.id,
           `Sent ${numAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${asset}`,
-          `Sent to ${recipientShort}${memo ? ` · ${memo}` : ''}. Platform fee: ${platformFee.toFixed(6)} ${asset} (${(PLATFORM_FEE_RATE * 100).toFixed(1)}%).`,
+          `Sent to ${recipientShort}. Platform fee: ${platformFee.toFixed(6)} ${asset} (${(PLATFORM_FEE_RATE * 100).toFixed(1)}%).`,
           'info',
         );
       }
@@ -422,16 +419,6 @@ export function SendDialog({
                 </Select>
               </div>
             </div>
-            <div>
-              <Label htmlFor="send-memo">Memo (optional)</Label>
-              <Input
-                id="send-memo"
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
-                placeholder="e.g. Invoice #104"
-                className="mt-1.5"
-              />
-            </div>
 
             {/* Balance info */}
             <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs">
@@ -445,8 +432,8 @@ export function SendDialog({
                 </span>
               </div>
               <div className="mt-1 flex justify-between">
-                <span className="text-muted-foreground">Estimated fee</span>
-                <span className="font-mono">{fee} MON</span>
+                <span className="text-muted-foreground">Platform fee ({(PLATFORM_FEE_RATE * 100).toFixed(1)}%)</span>
+                <span className="font-mono">{platformFee > 0 ? `${platformFee.toFixed(6)} ${asset}` : '—'}</span>
               </div>
               <div className="mt-1 flex justify-between">
                 <span className="text-muted-foreground">Network</span>
@@ -473,10 +460,8 @@ export function SendDialog({
               {[
                 { icon: UserRound, label: 'To', value: shorten(recipient, 10, 8) },
                 { icon: Coins, label: 'Amount', value: `${Number(amount).toLocaleString()} ${asset}` },
-                { icon: Fuel, label: 'Network fee', value: `~${fee} MON` },
                 { icon: Fuel, label: `Platform fee (${(PLATFORM_FEE_RATE * 100).toFixed(1)}%)`, value: `${platformFee.toFixed(6)} ${asset}` },
                 { icon: ShieldCheck, label: 'Network', value: 'Monad Testnet' },
-                ...(memo ? [{ icon: Coins, label: 'Memo', value: memo }] : []),
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex items-center justify-between px-4 py-2.5 text-sm">
                   <span className="flex items-center gap-2 text-muted-foreground">
