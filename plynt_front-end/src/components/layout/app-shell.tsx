@@ -220,12 +220,13 @@ function AuthShell({ children }: { children: React.ReactNode }) {
     markAllRead,
   } = useNotifications();
 
-  // Hard timeout — if Privy hasn't become ready within 12s, stop spinning
-  // and render as unauthenticated (useRequireAuth will redirect to /).
+  // Hard timeout — if Privy hasn't become ready within 25s, stop spinning.
+  // Must be >= the mount grace period in use-require-auth (8s) so the spinner
+  // shows the whole time Privy is doing its OAuth / wallet-creation work.
   const [privyTimedOut, setPrivyTimedOut] = useState(false);
   useEffect(() => {
     if (ready) { setPrivyTimedOut(false); return; }
-    const t = setTimeout(() => setPrivyTimedOut(true), 12_000);
+    const t = setTimeout(() => setPrivyTimedOut(true), 25_000);
     return () => clearTimeout(t);
   }, [ready]);
 
