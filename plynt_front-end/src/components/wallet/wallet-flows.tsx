@@ -36,7 +36,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { usePrivyUser } from '@/hooks/use-privy-user';
+import { useProfile } from '@/hooks/use-profile';
 import { monadTestnet } from '@/lib/privy';
+import { recordTransaction, calcPlatformFee, PLATFORM_FEE_RATE } from '@/services/transactionService';
+import { createNotification } from '@/services/notificationService';
 import type { AssetSymbol, TransactionDraft } from '@/types';
 import { shorten } from '@/components/shared/common';
 import type { WalletAsset } from '@/hooks/use-wallet-data';
@@ -231,9 +234,14 @@ export function SendDialog({
   const [txHash, setTxHash] = useState('');
 
   const { sendTransaction } = useSendTransaction();
+  const { walletAddress } = usePrivyUser();
+  const { profile } = useProfile();
 
   const MONAD_CHAIN_ID = 10143;
   const fee = 0.000021;
+
+  // Platform fee: 0.6% of amount (hardcoded, goes nowhere for now — air tx)
+  const platformFee = amount && !isNaN(Number(amount)) ? calcPlatformFee(Number(amount)) : 0;
 
   const availableAssets =
     assets.length > 0
@@ -298,9 +306,39 @@ export function SendDialog({
       toast.success('Transaction sent!', {
         description: hash ? `Tx: ${hash.slice(0, 10)}…${hash.slice(-6)}` : undefined,
       });
+
+      // ── Persist to DB + fire notification ────────────────────────────────
+      if (profile?.id) {
+        const PRICES: Record<string, number> = { MON: 0.189, USDC: 1.0, WETH: 1950 };
+        const numAmount = Number(amount);
+        const usdValue = numAmount * (PRICES[asset] ?? 0);
+        const recipientShort = recipient.slice(0, 6) + '…' + recipient.slice(-4);
+
+        await recordTransaction({
+          profileId: profile.id,
+          txHash: hash ?? undefined,
+          type: 'outgoing',
+          counterparty: recipientShort,
+          fromAddress: walletAddress,
+          toAddress: recipient,
+          asset,
+          amount: numAmount,
+          usdValue,
+          platformFee,
+          status: 'confirmed',
+          memo: memo || undefined,
+          explorerUrl: hash ? `https://testnet.monadscan.com/tx/${hash}` : undefined,
+        });
+
+        await createNotification(
+          profile.id,
+          `Sent ${numAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${asset}`,
+          `Sent to ${recipientShort}${memo ? ` · ${memo}` : ''}. Platform fee: ${platformFee.toFixed(6)} ${asset} (${(PLATFORM_FEE_RATE * 100).toFixed(1)}%).`,
+          'info',
+        );
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Transaction failed';
-      // User rejected — friendly message
       const friendly = msg.toLowerCase().includes('reject') || msg.toLowerCase().includes('denied')
         ? 'Transaction cancelled.'
         : msg;
@@ -436,6 +474,7 @@ export function SendDialog({
                 { icon: UserRound, label: 'To', value: shorten(recipient, 10, 8) },
                 { icon: Coins, label: 'Amount', value: `${Number(amount).toLocaleString()} ${asset}` },
                 { icon: Fuel, label: 'Network fee', value: `~${fee} MON` },
+                { icon: Fuel, label: `Platform fee (${(PLATFORM_FEE_RATE * 100).toFixed(1)}%)`, value: `${platformFee.toFixed(6)} ${asset}` },
                 { icon: ShieldCheck, label: 'Network', value: 'Monad Testnet' },
                 ...(memo ? [{ icon: Coins, label: 'Memo', value: memo }] : []),
               ].map(({ icon: Icon, label, value }) => (

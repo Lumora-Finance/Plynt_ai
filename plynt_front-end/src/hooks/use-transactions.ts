@@ -1,20 +1,32 @@
 // src/hooks/use-transactions.ts
-import { useWallets } from '@privy-io/react-auth';
-import { useEffect, useState } from 'react';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useCallback, useEffect, useState } from 'react';
+import { useProfile } from './use-profile';
+import {
+  fetchTransactions,
+  recordTransaction,
+  txHashExists,
+  calcPlatformFee,
+  PLATFORM_FEE_RATE,
+  type TransactionRow,
+} from '@/services/transactionService';
+import { createNotification } from '@/services/notificationService';
+
+export type { TransactionRow };
+export { PLATFORM_FEE_RATE, calcPlatformFee };
 
 const MONAD_RPC = 'https://testnet-rpc.monad.xyz';
 const MONAD_EXPLORER = 'https://testnet.monadscan.com';
 
-// ERC20 token contracts on Monad Testnet
-// USDC: https://www.circle.com/blog/now-available-usdc-cctp-wallets-and-contracts-on-monad
-const ERC20_TOKENS: Record<string, { symbol: string; decimals: number; name: string }> = {
-  '0x534b2f3a21130d7a60830c2df862319e593943a3': { symbol: 'USDC', decimals: 6, name: 'USD Coin' },
+const ERC20_TOKENS: Record<string, { symbol: string; decimals: number }> = {
+  '0x534b2f3a21130d7a60830c2df862319e593943a3': { symbol: 'USDC', decimals: 6 },
 };
-
-// ERC20 Transfer event topic
 const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 
-async function rpcCall(method: string, params: unknown[]) {
+const PRICES: Record<string, number> = { MON: 0.189, USDC: 1.0, WETH: 1950 };
+function usdOf(amount: number, symbol: string) { return amount * (PRICES[symbol] ?? 0); }
+
+async function rpc(method: string, params: unknown[]) {
   const res = await fetch(MONAD_RPC, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -25,247 +37,228 @@ async function rpcCall(method: string, params: unknown[]) {
   return json.result;
 }
 
-export interface OnChainTransaction {
+function shorten(addr: string) {
+  if (!addr || addr.length < 10) return addr;
+  return addr.slice(0, 6) + '…' + addr.slice(-4);
+}
+
+/** Shape exposed by the hook — extends DB row with display helpers */
+export interface OnChainTransaction extends TransactionRow {
+  // aliases for existing UI compatibility
   id: string;
+  type: "incoming" | "outgoing" | "gift" | "invoice" | "swap" | "convert";
   hash: string;
-  type: 'incoming' | 'outgoing' | 'payment' | 'swap';
   counterparty: string;
-  from: string;
-  to: string;
   asset: string;
   amount: number;
   usdValue: number;
-  status: 'confirmed' | 'pending' | 'failed';
+  status: "pending" | "confirmed" | "failed";
   timestamp: string;
   memo: string;
   fee: number;
   explorerUrl: string;
 }
 
-function shortenAddress(addr: string): string {
-  if (!addr || addr.length < 10) return addr;
-  return addr.slice(0, 6) + '...' + addr.slice(-4);
-}
-
-// Price approximations for Monad Testnet
-const PRICES: Record<string, number> = {
-  MON: 0.189,
-  USDC: 1.0,
-  WETH: 1950,
-};
-
-function getPrice(symbol: string): number {
-  return PRICES[symbol] ?? 0;
+function rowToTx(r: TransactionRow): OnChainTransaction {
+  return {
+    ...r,
+    hash: r.tx_hash ?? '',
+    usdValue: r.usd_value,
+    timestamp: r.created_at,
+    memo: r.memo ?? '',
+    fee: 0,
+    explorerUrl: r.explorer_url ?? '',
+  };
 }
 
 export function useTransactions() {
+  const { ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
+  const { profile } = useProfile();
+
   const [transactions, setTransactions] = useState<OnChainTransaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const embeddedWallet = wallets.find((w) => w.walletClientType === 'privy');
   const address = embeddedWallet?.address;
+  const profileId = profile?.id;
+
+  // ── Load from DB ────────────────────────────────────────────────────────────
+  const loadFromDB = useCallback(async () => {
+    if (!profileId) return;
+    const rows = await fetchTransactions(profileId);
+    setTransactions(rows.map(rowToTx));
+  }, [profileId]);
 
   useEffect(() => {
-    if (!address) return;
+    if (ready && authenticated && profileId) loadFromDB();
+  }, [ready, authenticated, profileId, loadFromDB]);
+
+  // ── Sync on-chain → DB ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!address || !profileId) return;
     let cancelled = false;
 
-    async function fetchTransactions() {
-      if (!address) return;
+    async function syncOnChain() {
+      if (!address || !profileId) return;
       setLoading(true);
       setError(null);
 
       try {
         const addrLower = address.toLowerCase();
+        const latestHex: string = await rpc('eth_blockNumber', []);
+        const latest = parseInt(latestHex, 16);
 
-        // Get latest block number
-        const latestBlockHex: string = await rpcCall('eth_blockNumber', []);
-        const latestBlock = parseInt(latestBlockHex, 16);
-
-        const txMap = new Map<string, OnChainTransaction>();
-
-        // ── 1. Fetch native MON transfers (scan last 100 blocks in batches) ──
-        // eth_getLogs only works for contract events; native transfers need block scan.
-        // We limit to 100 blocks for native to keep it fast.
-        const nativeScanFrom = Math.max(0, latestBlock - 100);
-        const blockNums = Array.from({ length: latestBlock - nativeScanFrom + 1 }, (_, i) => nativeScanFrom + i);
+        // ── Native MON (last 100 blocks) ──────────────────────────────────
+        const from = Math.max(0, latest - 100);
+        const blockNums = Array.from({ length: latest - from + 1 }, (_, i) => from + i);
 
         const blockResults = await Promise.allSettled(
-          blockNums.map((num) =>
-            rpcCall('eth_getBlockByNumber', ['0x' + num.toString(16), true]),
-          ),
+          blockNums.map((n) => rpc('eth_getBlockByNumber', ['0x' + n.toString(16), true])),
         );
+
+        const toRecord: Parameters<typeof recordTransaction>[0][] = [];
 
         for (const result of blockResults) {
           if (result.status !== 'fulfilled' || !result.value?.transactions) continue;
           const block = result.value;
-          const blockTimestamp = new Date(parseInt(block.timestamp, 16) * 1000).toISOString();
+          const ts = new Date(parseInt(block.timestamp, 16) * 1000).toISOString();
 
           for (const tx of block.transactions) {
             const fromLower = (tx.from as string)?.toLowerCase();
             const toLower = (tx.to as string)?.toLowerCase();
-
             if (fromLower !== addrLower && toLower !== addrLower) continue;
 
-            // Skip if it's a contract call to known ERC20s (will be captured via logs)
-            const isERC20Contract = toLower && toLower in ERC20_TOKENS;
+            const isERC20 = toLower && toLower in ERC20_TOKENS;
             const hasInput = tx.input && tx.input !== '0x';
-            if (isERC20Contract && hasInput) continue;
+            if (isERC20 && hasInput) continue;
 
-            const isOutgoing = fromLower === addrLower;
-            const valueWei = BigInt(tx.value as string);
-            const amountMON = Number(valueWei) / 1e18;
+            const isOut = fromLower === addrLower;
+            const amount = Number(BigInt(tx.value as string)) / 1e18;
+            if (amount === 0) continue;
 
-            if (amountMON === 0 && isERC20Contract) continue; // pure ERC20 call, skip
+            const alreadyExists = await txHashExists(profileId, tx.hash as string);
+            if (alreadyExists) continue;
 
-            const gasPrice = BigInt((tx.gasPrice as string) || '0x0');
-            const gasUsed = BigInt((tx.gas as string) || '0x5208');
-            const feeMON = Number(gasPrice * gasUsed) / 1e18;
-
-            const entry: OnChainTransaction = {
-              id: tx.hash as string,
-              hash: tx.hash as string,
-              type: isOutgoing ? 'outgoing' : 'incoming',
-              counterparty: isOutgoing
-                ? shortenAddress((tx.to as string) ?? 'Contract')
-                : shortenAddress(tx.from as string),
-              from: tx.from as string,
-              to: (tx.to as string) ?? 'Contract',
+            const fee = isOut ? calcPlatformFee(amount) : 0;
+            toRecord.push({
+              profileId,
+              txHash: tx.hash as string,
+              type: isOut ? 'outgoing' : 'incoming',
+              counterparty: isOut ? shorten(tx.to as string ?? '') : shorten(tx.from as string),
+              fromAddress: tx.from as string,
+              toAddress: tx.to as string ?? '',
               asset: 'MON',
-              amount: amountMON,
-              usdValue: amountMON * getPrice('MON'),
-              status: 'confirmed',
-              timestamp: blockTimestamp,
-              memo: hasInput ? 'Contract interaction' : '',
-              fee: feeMON,
-              explorerUrl: `${MONAD_EXPLORER}/tx/${tx.hash}`,
-            };
-            txMap.set(tx.hash as string, entry);
-          }
-        }
-
-        // ── 2. Fetch ERC20 Transfer events via eth_getLogs ──────────────────────
-        // Monad RPC limits eth_getLogs to 100 blocks per call — batch accordingly.
-        const LOG_SCAN_DEPTH = 2000; // ~33 min of blocks
-        const LOG_BATCH = 100;
-        const logFrom = Math.max(0, latestBlock - LOG_SCAN_DEPTH);
-
-        const padAddr = (a: string) => '0x' + a.slice(2).padStart(64, '0');
-
-        // Build batch ranges: [[from, to], [from, to], ...]
-        const ranges: [number, number][] = [];
-        for (let start = logFrom; start <= latestBlock; start += LOG_BATCH) {
-          ranges.push([start, Math.min(start + LOG_BATCH - 1, latestBlock)]);
-        }
-
-        // Fetch outgoing + incoming logs for each range in parallel (capped at 10 concurrent)
-        const CONCURRENCY = 10;
-        const erc20Logs: any[] = [];
-
-        for (let i = 0; i < ranges.length; i += CONCURRENCY) {
-          const batch = ranges.slice(i, i + CONCURRENCY);
-          const batchResults = await Promise.allSettled(
-            batch.flatMap(([from, to]) => {
-              const fromHex = '0x' + from.toString(16);
-              const toHex = '0x' + to.toString(16);
-              return [
-                // Outgoing: from = wallet
-                rpcCall('eth_getLogs', [{
-                  fromBlock: fromHex,
-                  toBlock: toHex,
-                  topics: [TRANSFER_TOPIC, padAddr(address)],
-                }]),
-                // Incoming: to = wallet
-                rpcCall('eth_getLogs', [{
-                  fromBlock: fromHex,
-                  toBlock: toHex,
-                  topics: [TRANSFER_TOPIC, null, padAddr(address)],
-                }]),
-              ];
-            }),
-          );
-          for (const r of batchResults) {
-            if (r.status === 'fulfilled' && Array.isArray(r.value)) {
-              erc20Logs.push(...r.value);
-            }
-          }
-        }
-
-        const uniqueBlocks = [...new Set(erc20Logs.map((l: any) => l.blockNumber as string))];
-        const blockTimestampMap = new Map<string, string>();
-
-        await Promise.allSettled(
-          uniqueBlocks.map(async (blockHex) => {
-            const block = await rpcCall('eth_getBlockByNumber', [blockHex, false]);
-            if (block?.timestamp) {
-              blockTimestampMap.set(
-                blockHex,
-                new Date(parseInt(block.timestamp, 16) * 1000).toISOString(),
-              );
-            }
-          }),
-        );
-
-        for (const log of erc20Logs) {
-          const contractAddr = (log.address as string).toLowerCase();
-          const token = ERC20_TOKENS[contractAddr];
-          if (!token) continue;
-
-          const fromAddr = '0x' + (log.topics[1] as string).slice(26);
-          const toAddr = '0x' + (log.topics[2] as string).slice(26);
-          const fromLower = fromAddr.toLowerCase();
-          const toLower = toAddr.toLowerCase();
-
-          if (fromLower !== addrLower && toLower !== addrLower) continue;
-
-          const isOutgoing = fromLower === addrLower;
-          const raw = BigInt(log.data as string);
-          const amount = Number(raw) / 10 ** token.decimals;
-          const usdValue = amount * getPrice(token.symbol);
-          const timestamp = blockTimestampMap.get(log.blockNumber as string) ?? new Date().toISOString();
-          const txHash = log.transactionHash as string;
-
-          // Use txHash as key — deduplicate (in case MON entry already exists for same hash)
-          const key = `${txHash}-${log.logIndex}`;
-          if (!txMap.has(key)) {
-            txMap.set(key, {
-              id: key,
-              hash: txHash,
-              type: isOutgoing ? 'outgoing' : 'incoming',
-              counterparty: isOutgoing ? shortenAddress(toAddr) : shortenAddress(fromAddr),
-              from: fromAddr,
-              to: toAddr,
-              asset: token.symbol,
               amount,
-              usdValue,
+              usdValue: usdOf(amount, 'MON'),
+              platformFee: fee,
               status: 'confirmed',
-              timestamp,
-              memo: '',
-              fee: 0,
-              explorerUrl: `${MONAD_EXPLORER}/tx/${txHash}`,
+              memo: hasInput ? 'Contract interaction' : '',
+              explorerUrl: `${MONAD_EXPLORER}/tx/${tx.hash}`,
             });
           }
         }
 
-        // Sort newest first
-        const sorted = [...txMap.values()].sort(
-          (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+        // ── ERC20 events (last 2000 blocks) ──────────────────────────────
+        const logFrom = Math.max(0, latest - 2000);
+        const LOG_BATCH = 100;
+        const pad = (a: string) => '0x' + a.slice(2).padStart(64, '0');
+        const ranges: [number, number][] = [];
+        for (let s = logFrom; s <= latest; s += LOG_BATCH) {
+          ranges.push([s, Math.min(s + LOG_BATCH - 1, latest)]);
+        }
+
+        const erc20Logs: any[] = [];
+        const CONC = 10;
+        for (let i = 0; i < ranges.length; i += CONC) {
+          const batch = ranges.slice(i, i + CONC);
+          const results = await Promise.allSettled(
+            batch.flatMap(([f, t]) => {
+              const fh = '0x' + f.toString(16);
+              const th = '0x' + t.toString(16);
+              return [
+                rpc('eth_getLogs', [{ fromBlock: fh, toBlock: th, topics: [TRANSFER_TOPIC, pad(address)] }]),
+                rpc('eth_getLogs', [{ fromBlock: fh, toBlock: th, topics: [TRANSFER_TOPIC, null, pad(address)] }]),
+              ];
+            }),
+          );
+          for (const r of results) {
+            if (r.status === 'fulfilled' && Array.isArray(r.value)) erc20Logs.push(...r.value);
+          }
+        }
+
+        // Fetch block timestamps for ERC20 logs
+        const uniqueBlocks = [...new Set(erc20Logs.map((l: any) => l.blockNumber as string))];
+        const btsMap = new Map<string, string>();
+        await Promise.allSettled(
+          uniqueBlocks.map(async (bh) => {
+            const b = await rpc('eth_getBlockByNumber', [bh, false]);
+            if (b?.timestamp) btsMap.set(bh, new Date(parseInt(b.timestamp, 16) * 1000).toISOString());
+          }),
         );
 
-        if (!cancelled) setTransactions(sorted);
+        for (const log of erc20Logs) {
+          const token = ERC20_TOKENS[(log.address as string).toLowerCase()];
+          if (!token) continue;
+          const fromAddr = '0x' + (log.topics[1] as string).slice(26);
+          const toAddr = '0x' + (log.topics[2] as string).slice(26);
+          const isOut = fromAddr.toLowerCase() === addrLower;
+          const amount = Number(BigInt(log.data as string)) / 10 ** token.decimals;
+          const txHash = log.transactionHash as string;
+
+          const alreadyExists = await txHashExists(profileId, txHash);
+          if (alreadyExists) continue;
+
+          const fee = isOut ? calcPlatformFee(amount) : 0;
+          toRecord.push({
+            profileId,
+            txHash,
+            type: isOut ? 'outgoing' : 'incoming',
+            counterparty: isOut ? shorten(toAddr) : shorten(fromAddr),
+            fromAddress: fromAddr,
+            toAddress: toAddr,
+            asset: token.symbol,
+            amount,
+            usdValue: usdOf(amount, token.symbol),
+            platformFee: fee,
+            status: 'confirmed',
+            memo: '',
+            explorerUrl: `${MONAD_EXPLORER}/tx/${txHash}`,
+          });
+        }
+
+        // Record new transactions + fire notifications for each
+        if (!cancelled && toRecord.length > 0) {
+          await Promise.allSettled(
+            toRecord.map(async (t) => {
+              const row = await recordTransaction(t);
+              if (!row) return;
+
+              // Notification
+              const dir = t.type === 'incoming' ? 'Received' : 'Sent';
+              const amt = `${t.amount.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${t.asset}`;
+              await createNotification(
+                profileId,
+                `${dir} ${amt}`,
+                `${dir} ${amt} ${t.type === 'incoming' ? 'from' : 'to'} ${t.counterparty}`,
+                t.type === 'incoming' ? 'success' : 'info',
+              );
+            }),
+          );
+          if (!cancelled) await loadFromDB();
+        }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to fetch transactions');
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to sync transactions');
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
 
-    fetchTransactions();
-    return () => {
-      cancelled = true;
-    };
-  }, [address]);
+    syncOnChain();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address, profileId]);
 
   return { transactions, loading, error, address };
 }

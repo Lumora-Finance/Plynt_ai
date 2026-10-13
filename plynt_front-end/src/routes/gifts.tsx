@@ -50,6 +50,8 @@ import { PageIntro, EmptyState, currency } from "@/components/shared/common";
 import { MonLogo } from "@/components/shared/mon-logo";
 import { Reveal } from "@/components/shared/motion";
 import { giftService } from "@/services/giftService";
+import { recordTransaction, calcPlatformFee, PLATFORM_FEE_RATE } from "@/services/transactionService";
+import { createNotification } from "@/services/notificationService";
 import { useProfile } from "@/hooks/use-profile";
 import type { Gift as GiftType } from "@/types";
 
@@ -301,6 +303,31 @@ function CreateGiftDialog({
           initialStatus === "available" ? "available to claim now" : `unlocks ${new Date(form.unlockDate).toLocaleDateString()}`
         }`,
       });
+
+      // ── Record transaction + notification ────────────────────────────────
+      if (profileId) {
+        const PRICES: Record<string, number> = { MON: 0.189, USDC: 1.0, WETH: 1950 };
+        const usdValue = created.amount * (PRICES[created.asset] ?? 0);
+        const platformFee = calcPlatformFee(created.amount);
+        await recordTransaction({
+          profileId,
+          type: "gift",
+          counterparty: created.recipient,
+          toAddress: created.recipientAddress ?? undefined,
+          asset: created.asset,
+          amount: created.amount,
+          usdValue,
+          platformFee,
+          status: "confirmed",
+          memo: created.message ?? `Gift to ${created.recipient}`,
+        });
+        await createNotification(
+          profileId,
+          `Gift sent to ${created.recipient}`,
+          `${currency(created.amount)} ${created.asset} gift. Platform fee: ${platformFee.toFixed(6)} ${created.asset} (${(PLATFORM_FEE_RATE * 100).toFixed(1)}%).`,
+          "success",
+        );
+      }
     } catch (e) {
       toast.error("Failed to create gift", {
         description: e instanceof Error ? e.message : "Unknown error",

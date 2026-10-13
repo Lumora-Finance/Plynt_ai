@@ -1,6 +1,6 @@
 // ─── Core primitives ──────────────────────────────────────────────────────────
 export type AssetSymbol = "USDC" | "MON" | "WETH" | "AQUA";
-export type TransactionType = "incoming" | "outgoing" | "payment" | "swap";
+export type TransactionType = "incoming" | "outgoing" | "payment" | "swap" | "gift" | "invoice" | "convert";
 export type TransactionStatus = "confirmed" | "pending" | "failed";
 export type InvoiceStatus = "draft" | "pending" | "paid" | "overdue";
 
