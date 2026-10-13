@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { AppShell } from "@/components/layout/app-shell";
 import { ThemeProvider } from "@/components/layout/theme-provider";
@@ -140,36 +140,18 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const appId = import.meta.env["VITE_PRIVY_APP_ID"] as string;
 
-  // PrivyProvider accesses localStorage at initialisation which crashes on the
-  // server. We defer it to the first client render using a mounted flag.
-  // IMPORTANT: We always render PrivyProvider once mounted so that the OAuth
-  // callback URL (/?code=...&state=...) is handled correctly — without it,
-  // useRequireAuth fires a redirect before Privy processes the OAuth code and
-  // the user sees "Authentication failed".
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-
-  const inner = (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider delayDuration={250}>
-          <AppShell>
-            <Outlet />
-          </AppShell>
-          <Toaster richColors={false} />
-        </TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
-  );
-
-  if (!mounted) {
-    // Server / first render — no Privy yet, just render the shell
-    return inner;
-  }
-
   return (
     <PrivyProvider appId={appId} config={privyConfig}>
-      {inner}
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <TooltipProvider delayDuration={250}>
+            <AppShell>
+              <Outlet />
+            </AppShell>
+            <Toaster richColors={false} />
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </PrivyProvider>
   );
 }

@@ -1,5 +1,5 @@
 import { usePrivy } from "@privy-io/react-auth";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, Link } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Mail } from "lucide-react";
 
@@ -170,8 +170,23 @@ export function LandingPage() {
           style={{ color: "#565666", fontFamily: "var(--font-mono)" }}
         >
           By continuing you agree to Plynt's{" "}
-          <span style={{ color: "#727285" }}>Terms of Service</span> and{" "}
-          <span style={{ color: "#727285" }}>Privacy Policy</span>.
+          <Link
+            to="/terms"
+            style={{ color: "#8270FF" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = "underline"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = "none"; }}
+          >
+            Terms of Service
+          </Link>
+          {" "}and{" "}
+          <Link
+            to="/privacy"
+            style={{ color: "#8270FF" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = "underline"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = "none"; }}
+          >
+            Privacy Policy
+          </Link>.
         </p>
       </div>
 

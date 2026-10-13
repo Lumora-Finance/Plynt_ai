@@ -17,9 +17,11 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as GiftsRouteImport } from './routes/gifts'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as InvoicesRouteImport } from './routes/invoices'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SalaryRouteImport } from './routes/salary'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as WalletRouteImport } from './routes/wallet'
 import { Route as InvoicesIdRouteImport } from './routes/invoices.$id'
@@ -65,6 +67,11 @@ const InvoicesRoute = InvoicesRouteImport.update({
   path: '/invoices',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -78,6 +85,11 @@ const SalaryRoute = SalaryRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TransactionsRoute = TransactionsRouteImport.update({
@@ -110,9 +122,11 @@ export interface FileRoutesByFullPath {
   '/gifts': typeof GiftsRoute
   '/help': typeof HelpRoute
   '/invoices': typeof InvoicesRouteWithChildren
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
   '/settings': typeof SettingsRoute
+  '/terms': typeof TermsRoute
   '/transactions': typeof TransactionsRoute
   '/wallet': typeof WalletRoute
   '/invoices/$id': typeof InvoicesIdRoute
@@ -127,9 +141,11 @@ export interface FileRoutesByTo {
   '/gifts': typeof GiftsRoute
   '/help': typeof HelpRoute
   '/invoices': typeof InvoicesRouteWithChildren
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
   '/settings': typeof SettingsRoute
+  '/terms': typeof TermsRoute
   '/transactions': typeof TransactionsRoute
   '/wallet': typeof WalletRoute
   '/invoices/$id': typeof InvoicesIdRoute
@@ -145,9 +161,11 @@ export interface FileRoutesById {
   '/gifts': typeof GiftsRoute
   '/help': typeof HelpRoute
   '/invoices': typeof InvoicesRouteWithChildren
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/salary': typeof SalaryRoute
   '/settings': typeof SettingsRoute
+  '/terms': typeof TermsRoute
   '/transactions': typeof TransactionsRoute
   '/wallet': typeof WalletRoute
   '/invoices/$id': typeof InvoicesIdRoute
@@ -164,9 +182,11 @@ export interface FileRouteTypes {
     | '/gifts'
     | '/help'
     | '/invoices'
+    | '/privacy'
     | '/profile'
     | '/salary'
     | '/settings'
+    | '/terms'
     | '/transactions'
     | '/wallet'
     | '/invoices/$id'
@@ -181,9 +201,11 @@ export interface FileRouteTypes {
     | '/gifts'
     | '/help'
     | '/invoices'
+    | '/privacy'
     | '/profile'
     | '/salary'
     | '/settings'
+    | '/terms'
     | '/transactions'
     | '/wallet'
     | '/invoices/$id'
@@ -198,9 +220,11 @@ export interface FileRouteTypes {
     | '/gifts'
     | '/help'
     | '/invoices'
+    | '/privacy'
     | '/profile'
     | '/salary'
     | '/settings'
+    | '/terms'
     | '/transactions'
     | '/wallet'
     | '/invoices/$id'
@@ -216,9 +240,11 @@ export interface RootRouteChildren {
   GiftsRoute: typeof GiftsRoute
   HelpRoute: typeof HelpRoute
   InvoicesRoute: typeof InvoicesRouteWithChildren
+  PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   SalaryRoute: typeof SalaryRoute
   SettingsRoute: typeof SettingsRoute
+  TermsRoute: typeof TermsRoute
   TransactionsRoute: typeof TransactionsRoute
   WalletRoute: typeof WalletRoute
 }
@@ -281,6 +307,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InvoicesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile': {
       id: '/profile'
       path: '/profile'
@@ -300,6 +333,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/transactions': {
@@ -356,9 +396,11 @@ const rootRouteChildren: RootRouteChildren = {
   GiftsRoute: GiftsRoute,
   HelpRoute: HelpRoute,
   InvoicesRoute: InvoicesRouteWithChildren,
+  PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   SalaryRoute: SalaryRoute,
   SettingsRoute: SettingsRoute,
+  TermsRoute: TermsRoute,
   TransactionsRoute: TransactionsRoute,
   WalletRoute: WalletRoute,
 }

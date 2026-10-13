@@ -60,8 +60,8 @@ export function useRequireAuth() {
   useEffect(() => {
     // Still loading — never redirect prematurely
     if (!ready) return;
-    // On the landing page itself — nothing to do
-    if (pathname === "/") return;
+    // Public pages — no auth needed
+    if (pathname === "/" || pathname === "/terms" || pathname === "/privacy") return;
     // Mid-OAuth or grace period — wait it out
     if (isOAuthCallback || oauthSeen.current) return;
     // Authenticated — all good

@@ -187,13 +187,16 @@ function Navigation({ close, isAdmin }: { close?: () => void; isAdmin?: boolean 
 // ─── AppShell ─────────────────────────────────────────────────────────────────
 // Outer shell: safe to render without PrivyProvider (landing page / SSR pass)
 
+// Public paths that render without the authenticated shell
+const PUBLIC_PATHS = ["/", "/terms", "/privacy"];
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
 
-  // Landing page gets no chrome and needs no Privy context
-  if (path === "/") return <>{children}</>;
+  // Public pages get no nav chrome
+  if (PUBLIC_PATHS.includes(path)) return <>{children}</>;
 
-  // All authenticated routes get the full shell (requires PrivyProvider)
+  // All authenticated routes get the full shell
   return <AuthShell>{children}</AuthShell>;
 }
 
