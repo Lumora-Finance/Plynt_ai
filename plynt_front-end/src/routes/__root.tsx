@@ -128,7 +128,9 @@ function RootShell({ children }: { children: ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      {/* suppressHydrationWarning stops React from complaining about attributes
+          injected by browser extensions (e.g. cz-shortcut-listen from Grammarly) */}
+      <body suppressHydrationWarning>
         {children}
         <Scripts />
       </body>
@@ -139,6 +141,19 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const appId = import.meta.env["VITE_PRIVY_APP_ID"] as string;
+
+  // Unregister any stale service workers left over from previous builds.
+  // This app does not use a service worker — any registered SW is a relic
+  // from an old dev session and will intercept/break fetch requests.
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const sw of registrations) {
+          sw.unregister();
+        }
+      });
+    }
+  }, []);
 
   return (
     <PrivyProvider appId={appId} config={privyConfig}>
