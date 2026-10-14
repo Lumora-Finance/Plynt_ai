@@ -1086,7 +1086,7 @@ export default function AssistantPage() {
     if (loading) return;
     addMsg({ role: "user", text });
     const lower = text.toLowerCase();
-    if (lower.includes("receive") || lower.includes("my address") || lower.includes("show qr") || lower.includes("deposit") || lower.includes("fund my wallet") || lower.includes("get paid")) {
+    if (lower.includes("my address") || lower.includes("show qr") || lower.includes("deposit") || lower.includes("fund my wallet") || lower.includes("get paid") || lower === "receive" || lower.startsWith("receive ") || lower.includes("receive assets") || lower.includes("receive money") || lower.includes("receive payment")) {
       addMsg({ role: "assistant", text: `📋 Opening your receive panel now — share your address to get paid!\n\nYour address: \`${walletData?.address ?? "sign in to see"}\``, cardType: "none" });
       setReceiveOpen(true);
       return;
