@@ -34,11 +34,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { assistantService, type CardType } from "@/services/assistantService";
+import { assistantService, type CardType, type AssistantInvoice, type AssistantGift, type AssistantSalary } from "@/services/assistantService";
 import { useWalletData } from "@/hooks/use-wallet-data";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useProfile } from "@/hooks/use-profile";
 import { supabase } from "@/lib/supabase";
+import { invoiceService } from "@/services/invoiceService";
+import { giftService } from "@/services/giftService";
+import { salaryService } from "@/services/salaryService";
 import type { AssetSymbol } from "@/types";
 import { SendDialog, ReceiveDialog } from "@/components/wallet/wallet-flows";
 import { DonutChart, FlowChart } from "@/components/analytics/charts";
@@ -336,20 +339,84 @@ function AnalyticsCard({ transactions, total }: { transactions: { type: string; 
   );
 }
 
-function InvoiceListCard({ onCreateInvoice }: { onCreateInvoice: () => void }) {
+function InvoiceListCard({
+  invoices,
+  onCreateInvoice,
+}: {
+  invoices: AssistantInvoice[];
+  onCreateInvoice: () => void;
+}) {
+  const statusColor: Record<string, string> = {
+    paid: "text-emerald-500 bg-emerald-500/10",
+    pending: "text-amber-500 bg-amber-500/10",
+    overdue: "text-red-500 bg-red-500/10",
+    draft: "text-muted-foreground bg-muted",
+  };
+
+  if (invoices.length === 0) {
+    return (
+      <div className="mt-3 overflow-hidden rounded-xl border border-border bg-card" style={{ animation: "fadeSlideUp 0.4s ease" }}>
+        <div className="border-b border-border px-4 py-3">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Invoices</span>
+        </div>
+        <div className="flex flex-col items-center gap-3 px-4 py-6 text-center">
+          <FileText className="size-10 text-primary/40" />
+          <div>
+            <p className="font-medium">No invoices yet</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Create your first invoice and I'll generate a payment link for you right here.</p>
+          </div>
+          <Button size="sm" onClick={onCreateInvoice}>
+            <FileText className="size-4" /> Create Invoice
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const sorted = [...invoices].sort((a, b) => {
+    const order = { overdue: 0, pending: 1, draft: 2, paid: 3 };
+    return (order[a.status] ?? 9) - (order[b.status] ?? 9);
+  });
+
+  const totalOwed = invoices.filter(i => i.status === "pending" || i.status === "overdue").reduce((s, i) => s + i.amount, 0);
+
   return (
     <div className="mt-3 overflow-hidden rounded-xl border border-border bg-card" style={{ animation: "fadeSlideUp 0.4s ease" }}>
-      <div className="border-b border-border px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Invoices</span>
-      </div>
-      <div className="flex flex-col items-center gap-3 px-4 py-6 text-center">
-        <FileText className="size-10 text-primary/40" />
-        <div>
-          <p className="font-medium">No invoices yet</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Create your first invoice and I'll generate a payment link for you right here.</p>
+        <div className="flex items-center gap-2">
+          {totalOwed > 0 && (
+            <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+              ${totalOwed.toLocaleString("en-US", { maximumFractionDigits: 2 })} outstanding
+            </span>
+          )}
+          <span className="text-xs text-muted-foreground">{invoices.length} total</span>
         </div>
-        <Button size="sm" onClick={onCreateInvoice}>
-          <FileText className="size-4" /> Create Invoice
+      </div>
+      <div className="divide-y divide-border">
+        {sorted.slice(0, 5).map((inv) => (
+          <div key={inv.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/20 transition-colors">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{inv.title}</p>
+              <p className="text-xs text-muted-foreground">{inv.clientName} · due {new Date(inv.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+            </div>
+            <div className="ml-3 flex flex-col items-end gap-1 shrink-0">
+              <p className="font-mono text-sm font-semibold">{inv.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {inv.asset}</p>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase ${statusColor[inv.status] ?? "text-muted-foreground bg-muted"}`}>
+                {inv.status}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+      {invoices.length > 5 && (
+        <div className="border-t border-border px-4 py-2 text-center">
+          <p className="text-xs text-muted-foreground">+{invoices.length - 5} more — view all in Invoices</p>
+        </div>
+      )}
+      <div className="border-t border-border p-3">
+        <Button size="sm" variant="outline" className="w-full" onClick={onCreateInvoice}>
+          <FileText className="size-3.5" /> Create New Invoice
         </Button>
       </div>
     </div>
@@ -388,6 +455,176 @@ function InvoiceLinkCard({ result }: { result: { id: string; paymentLink: string
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Inline inputs ─────────────────────────────────────────────────────────────
+function GiftListCard({
+  gifts,
+  onCreateGift,
+}: {
+  gifts: AssistantGift[];
+  onCreateGift: () => void;
+}) {
+  const statusColor: Record<string, string> = {
+    scheduled: "text-primary bg-primary/10",
+    available: "text-emerald-500 bg-emerald-500/10",
+    claimed: "text-muted-foreground bg-muted",
+    expired: "text-red-400 bg-red-400/10",
+    cancelled: "text-red-400 bg-red-400/10",
+  };
+
+  if (gifts.length === 0) {
+    return (
+      <div className="mt-3 overflow-hidden rounded-xl border border-border bg-card" style={{ animation: "fadeSlideUp 0.4s ease" }}>
+        <div className="border-b border-border px-4 py-3">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gifts</span>
+        </div>
+        <div className="flex flex-col items-center gap-3 px-4 py-6 text-center">
+          <Gift className="size-10 text-primary/40" />
+          <div>
+            <p className="font-medium">No gifts yet</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Send a time-locked programmable gift to anyone on Monad.</p>
+          </div>
+          <Button size="sm" onClick={onCreateGift}>
+            <Gift className="size-4" /> Send a Gift
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const active = gifts.filter((g) => g.status === "scheduled" || g.status === "available");
+
+  return (
+    <div className="mt-3 overflow-hidden rounded-xl border border-border bg-card" style={{ animation: "fadeSlideUp 0.4s ease" }}>
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gifts</span>
+        <div className="flex gap-2">
+          {active.length > 0 && (
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{active.length} active</span>
+          )}
+          <span className="text-xs text-muted-foreground">{gifts.length} total</span>
+        </div>
+      </div>
+      <div className="divide-y divide-border">
+        {gifts.slice(0, 5).map((g) => (
+          <div key={g.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/20 transition-colors">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm">{g.direction === "sent" ? "📤" : "📥"}</span>
+                <p className="truncate text-sm font-medium">{g.direction === "sent" ? g.recipient : g.sender}</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Unlocks {new Date(g.unlockDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                {g.isRecurring ? " · Recurring" : ""}
+              </p>
+            </div>
+            <div className="ml-3 flex flex-col items-end gap-1 shrink-0">
+              <p className="font-mono text-sm font-semibold">{g.amount.toLocaleString(undefined, { maximumFractionDigits: 4 })} {g.asset}</p>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase ${statusColor[g.status] ?? "text-muted-foreground bg-muted"}`}>
+                {g.status}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+      {gifts.length > 5 && (
+        <div className="border-t border-border px-4 py-2 text-center">
+          <p className="text-xs text-muted-foreground">+{gifts.length - 5} more — view all in Gifts</p>
+        </div>
+      )}
+      <div className="border-t border-border p-3">
+        <Button size="sm" variant="outline" className="w-full" onClick={onCreateGift}>
+          <Gift className="size-3.5" /> Send New Gift
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SalaryInfoCard({ salary }: { salary: AssistantSalary | null }) {
+  if (!salary) {
+    return (
+      <div className="mt-3 overflow-hidden rounded-xl border border-border bg-card" style={{ animation: "fadeSlideUp 0.4s ease" }}>
+        <div className="border-b border-border px-4 py-3">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Salary</span>
+        </div>
+        <div className="flex flex-col items-center gap-3 px-4 py-6 text-center">
+          <CreditCard className="size-10 text-primary/40" />
+          <div>
+            <p className="font-medium">No salary configured</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Set up your salary and distribution rules in the Salary section.</p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => window.open("/salary", "_blank")}>
+            Configure Salary
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const totalPercent = salary.distributionRules.reduce((s, r) => s + r.percentage, 0);
+
+  return (
+    <div className="mt-3 overflow-hidden rounded-xl border border-border bg-card" style={{ animation: "fadeSlideUp 0.4s ease" }}>
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Salary</span>
+        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${salary.autoDistribute ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
+          {salary.autoDistribute ? "Auto-distribute on" : "Manual"}
+        </span>
+      </div>
+      <div className="px-4 py-3">
+        <p className="text-sm text-muted-foreground">From {salary.employer}</p>
+        <p className="text-2xl font-bold text-foreground mt-0.5">
+          {salary.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} {salary.asset}
+          <span className="ml-1 text-base font-normal text-muted-foreground">/ {salary.frequency}</span>
+        </p>
+        {salary.nextPayment && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Next payment: {new Date(salary.nextPayment).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+          </p>
+        )}
+      </div>
+      {salary.distributionRules.length > 0 && (
+        <>
+          {/* Allocation bar */}
+          <div className="px-4 pb-2">
+            <div className="flex h-2 w-full overflow-hidden rounded-full">
+              {salary.distributionRules.map((r, i) => {
+                const colors = ["bg-primary", "bg-chart-2", "bg-chart-3", "bg-chart-4", "bg-chart-5"];
+                return (
+                  <div
+                    key={r.label}
+                    className={colors[i % colors.length]}
+                    style={{ width: `${r.percentage}%` }}
+                    title={`${r.label}: ${r.percentage}%`}
+                  />
+                );
+              })}
+            </div>
+          </div>
+          <div className="divide-y divide-border border-t border-border">
+            {salary.distributionRules.map((r) => (
+              <div key={r.label} className="flex items-center justify-between px-4 py-2 text-sm">
+                <span className="text-muted-foreground">{r.label}</span>
+                <div className="text-right">
+                  <span className="font-semibold">{r.percentage}%</span>
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {((salary.amount * r.percentage) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 })} {salary.asset}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {totalPercent !== 100 && (
+            <div className="border-t border-border px-4 py-2">
+              <p className="text-xs text-amber-600 dark:text-amber-400">⚠️ Distribution totals {totalPercent}% — should equal 100%</p>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -445,12 +682,15 @@ function ConfirmCard({ summary, question, onConfirm, onCancel }: { summary: Reco
 
 // ─── Chat bubble ───────────────────────────────────────────────────────────────
 function ChatBubble({
-  msg, flowState, walletData, transactions, onFlowInput, onConfirm, onCancel, onStartFlow,
+  msg, flowState, walletData, transactions, invoices, gifts, salary, onFlowInput, onConfirm, onCancel, onStartFlow,
 }: {
   msg: ChatMessage;
   flowState: FlowState | null;
   walletData: ReturnType<typeof useWalletData>["data"];
   transactions: ReturnType<typeof useTransactions>["transactions"];
+  invoices: AssistantInvoice[];
+  gifts: AssistantGift[];
+  salary: AssistantSalary | null;
   onFlowInput: (v: string) => void;
   onConfirm: (msg: ChatMessage) => void;
   onCancel: (msg: ChatMessage) => void;
@@ -490,7 +730,13 @@ function ChatBubble({
             <AnalyticsCard transactions={transactions} total={walletData.totalBalance} />
           )}
           {!isActiveStep && !isActiveConfirm && !msg.confirmed && msg.cardType === "invoice_list" && (
-            <InvoiceListCard onCreateInvoice={() => onStartFlow("create_invoice")} />
+            <InvoiceListCard invoices={invoices} onCreateInvoice={() => onStartFlow("create_invoice")} />
+          )}
+          {!isActiveStep && !isActiveConfirm && !msg.confirmed && msg.cardType === "gift_list" && (
+            <GiftListCard gifts={gifts} onCreateGift={() => onStartFlow("create_gift")} />
+          )}
+          {!isActiveStep && !isActiveConfirm && !msg.confirmed && msg.cardType === "salary_info" && (
+            <SalaryInfoCard salary={salary} />
           )}
 
           {/* Invoice payment link result */}
@@ -706,6 +952,65 @@ const WELCOME: ChatMessage = {
 export default function AssistantPage() {
   const { data: walletData } = useWalletData();
   const { transactions } = useTransactions();
+  const { profile } = useProfile();
+
+  // ── Real Supabase data ────────────────────────────────────────────────────────
+  const [invoices, setInvoices] = useState<AssistantInvoice[]>([]);
+  const [gifts, setGifts] = useState<AssistantGift[]>([]);
+  const [salary, setSalary] = useState<AssistantSalary | null>(null);
+
+  // Fetch invoices, gifts, salary whenever profile is ready
+  useEffect(() => {
+    if (!profile?.id) return;
+    invoiceService.getInvoices(profile.id).then((data) => {
+      setInvoices(
+        data.map((inv) => ({
+          id: inv.id,
+          title: inv.title,
+          clientName: inv.clientName,
+          clientEmail: inv.clientEmail,
+          amount: inv.amount,
+          asset: inv.asset,
+          status: inv.status as AssistantInvoice["status"],
+          dueDate: inv.dueDate,
+          paymentLink: inv.paymentLink,
+          createdAt: inv.createdAt,
+        })),
+      );
+    }).catch(() => {});
+
+    giftService.getGifts(profile.id).then((data) => {
+      setGifts(
+        data.map((g) => ({
+          id: g.id,
+          direction: g.direction as "sent" | "received",
+          recipient: g.recipient,
+          sender: g.sender,
+          amount: g.amount,
+          asset: g.asset,
+          status: g.status,
+          unlockDate: g.unlockDate,
+          expirationDate: g.expirationDate,
+          isRecurring: g.isRecurring,
+          message: g.message,
+          createdAt: g.createdAt,
+        })),
+      );
+    }).catch(() => {});
+
+    salaryService.getConfig(profile.id).then((cfg) => {
+      if (!cfg) { setSalary(null); return; }
+      setSalary({
+        employer: cfg.employer,
+        amount: cfg.amount,
+        asset: cfg.asset,
+        frequency: cfg.frequency,
+        nextPayment: cfg.nextPayment,
+        distributionRules: (cfg.distributionRules ?? []) as { label: string; percentage: number }[],
+        autoDistribute: cfg.autoDistribute,
+      });
+    }).catch(() => {});
+  }, [profile?.id]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [flowState, setFlowState] = useState<FlowState | null>(null);
@@ -792,7 +1097,21 @@ export default function AssistantPage() {
       walletAddress: walletData?.address,
       totalBalance: walletData?.totalBalance,
       assets: walletData?.assets,
-      transactions: transactions.map((t) => ({ type: t.type, counterparty: t.counterparty, amount: t.amount, usdValue: t.usdValue, asset: t.asset, timestamp: t.timestamp, status: t.status })),
+      transactions: transactions.map((t) => ({
+        type: t.type,
+        counterparty: t.counterparty,
+        amount: t.amount,
+        usdValue: t.usdValue,
+        asset: t.asset,
+        timestamp: t.timestamp,
+        status: t.status,
+      })),
+      invoices,
+      gifts,
+      salary,
+      profile: profile
+        ? { displayName: profile.display_name, email: profile.email, role: profile.role }
+        : null,
     });
     addMsg({ role: "assistant", text: result.content, cardType: result.cardType });
     setLoading(false);
@@ -873,6 +1192,9 @@ export default function AssistantPage() {
                   flowState={flowState}
                   walletData={walletData}
                   transactions={transactions}
+                  invoices={invoices}
+                  gifts={gifts}
+                  salary={salary}
                   onFlowInput={handleFlowInput}
                   onConfirm={handleConfirm}
                   onCancel={handleCancel}
